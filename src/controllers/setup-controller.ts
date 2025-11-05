@@ -6,8 +6,57 @@ const execAsync = promisify(exec);
 
 export class SetupController {
   /**
+   * Run database migrations
+   */
+  static async runMigrations(req: Request, res: Response) {
+    try {
+      const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
+
+      res.json({
+        success: true,
+        message: 'Migrations completed',
+        output: stdout,
+        errors: stderr || null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.json({
+        success: false,
+        error: error.message,
+        output: error.stdout,
+        stderr: error.stderr,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Seed database
+   */
+  static async seedDatabase(req: Request, res: Response) {
+    try {
+      const { stdout, stderr } = await execAsync('npx prisma db seed');
+
+      res.json({
+        success: true,
+        message: 'Database seeded',
+        output: stdout,
+        errors: stderr || null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.json({
+        success: false,
+        error: error.message,
+        output: error.stdout,
+        stderr: error.stderr,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  /**
    * Initialize database - run migrations and seed
-   * WARNING: This should be protected in production!
    */
   static async initializeDatabase(req: Request, res: Response) {
     try {
