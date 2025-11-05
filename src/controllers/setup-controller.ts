@@ -142,4 +142,57 @@ export class SetupController {
       });
     }
   }
+
+  /**
+   * Create system administrator (platform super admin)
+   */
+  static async createSystemAdmin(req: Request, res: Response) {
+    try {
+      const { PrismaClient } = await import('@prisma/client');
+      const bcrypt = await import('bcrypt');
+      const prisma = new PrismaClient();
+
+      const passwordHash = await bcrypt.hash('ClearTalent@2025', 10);
+
+      const sysAdmin = await prisma.user.upsert({
+        where: { email: 'sysadmin@cleartalent.io' },
+        update: {
+          role: 'SYSTEM_ADMIN',
+          tenantId: null,
+        },
+        create: {
+          email: 'sysadmin@cleartalent.io',
+          passwordHash,
+          firstName: 'System',
+          lastName: 'Administrator',
+          role: 'SYSTEM_ADMIN',
+          tenantId: null,
+          aiOptOut: false,
+        },
+      });
+
+      await prisma.$disconnect();
+
+      res.json({
+        success: true,
+        data: {
+          id: sysAdmin.id,
+          email: sysAdmin.email,
+          role: sysAdmin.role,
+        },
+        message: 'System administrator created successfully',
+        credentials: {
+          email: 'sysadmin@cleartalent.io',
+          password: 'ClearTalent@2025',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
 }
