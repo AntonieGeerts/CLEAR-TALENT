@@ -1,0 +1,568 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// ============================================================================
+// TENANT & USER MANAGEMENT
+// ============================================================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users              User[]
+  competencies       Competency[]
+  roleProfiles       RoleProfile[]
+  aiAuditLogs        AIAuditLog[]
+  embeddingVectors   EmbeddingVector[]
+  reviewCycles       ReviewCycle[]
+  feedbackItems      FeedbackItem[]
+  learningAssets     LearningAsset[]
+  developmentPlans   DevelopmentPlan[]
+  jobDescriptions    JobDescription[]
+
+  @@map("tenants")
+}
+
+enum UserRole {
+  ADMIN
+  HR_MANAGER
+  MANAGER
+  EMPLOYEE
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         UserRole
+  department   String?
+  position     String?
+  aiOptOut     Boolean  @default(false) @map("ai_opt_out")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdCompetencies    Competency[]       @relation("CompetencyCreator")
+  createdRoleProfiles    RoleProfile[]      @relation("RoleProfileCreator")
+  aiAuditLogs            AIAuditLog[]
+  managedReviews         Review[]           @relation("ReviewManager")
+  receivedReviews        Review[]           @relation("ReviewEmployee")
+  createdGoals           Goal[]
+  skillProfiles          SkillProfile[]
+  developmentPlans       DevelopmentPlan[]
+  feedbackGiven          FeedbackItem[]     @relation("FeedbackGiver")
+  feedbackReceived       FeedbackItem[]     @relation("FeedbackReceiver")
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================================================
+// COMPETENCY LIBRARY
+// ============================================================================
+
+enum CompetencyType {
+  TECHNICAL
+  BEHAVIORAL
+  LEADERSHIP
+  FUNCTIONAL
+}
+
+model Competency {
+  id          String         @id @default(uuid())
+  tenantId    String         @map("tenant_id")
+  name        String
+  type        CompetencyType
+  description String         @db.Text
+  category    String
+  tags        String[]       @default([])
+  version     Int            @default(1)
+  createdBy   String         @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  tenant                Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator               User                  @relation("CompetencyCreator", fields: [createdBy], references: [id])
+  proficiencyLevels     ProficiencyLevel[]
+  behavioralIndicators  BehavioralIndicator[]
+  roleCompetencies      RoleCompetency[]
+  embeddingVectors      EmbeddingVector[]
+  skillProfiles         SkillProfile[]
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([category])
+  @@map("competencies")
+}
+
+model ProficiencyLevel {
+  id            String   @id @default(uuid())
+  competencyId  String   @map("competency_id")
+  name          String
+  numericLevel  Int      @map("numeric_level")
+  description   String   @db.Text
+  sortOrder     Int      @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  competency            Competency            @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  behavioralIndicators  BehavioralIndicator[]
+  roleCompetencies      RoleCompetency[]
+  skillProfiles         SkillProfile[]
+
+  @@index([competencyId])
+  @@map("proficiency_levels")
+}
+
+model BehavioralIndicator {
+  id           String   @id @default(uuid())
+  competencyId String   @map("competency_id")
+  levelId      String   @map("level_id")
+  description  String   @db.Text
+  examples     String[] @default([])
+  sortOrder    Int      @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  competency Competency       @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  level      ProficiencyLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@index([competencyId])
+  @@index([levelId])
+  @@map("behavioral_indicators")
+}
+
+// ============================================================================
+// ROLE PROFILES
+// ============================================================================
+
+enum Seniority {
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  PRINCIPAL
+  EXECUTIVE
+}
+
+model RoleProfile {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  title       String
+  department  String
+  seniority   Seniority
+  description String    @db.Text
+  version     Int       @default(1)
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator           User                @relation("RoleProfileCreator", fields: [createdBy], references: [id])
+  roleCompetencies  RoleCompetency[]
+  embeddingVectors  EmbeddingVector[]
+  goals             Goal[]
+
+  @@index([tenantId])
+  @@index([department])
+  @@map("role_profiles")
+}
+
+model RoleCompetency {
+  id            String   @id @default(uuid())
+  roleProfileId String   @map("role_profile_id")
+  competencyId  String   @map("competency_id")
+  requiredLevel String   @map("required_level_id")
+  isMandatory   Boolean  @default(true) @map("is_mandatory")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  roleProfile   RoleProfile      @relation(fields: [roleProfileId], references: [id], onDelete: Cascade)
+  competency    Competency       @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  level         ProficiencyLevel @relation(fields: [requiredLevel], references: [id])
+
+  @@index([roleProfileId])
+  @@index([competencyId])
+  @@map("role_competencies")
+}
+
+// ============================================================================
+// AI ENGINE
+// ============================================================================
+
+enum AIModule {
+  COMPETENCY
+  REVIEW
+  FEEDBACK
+  JD
+  LEARNING
+  GOAL
+  APPRAISAL
+}
+
+model AIPromptTemplate {
+  id         String   @id @default(uuid())
+  name       String
+  module     AIModule
+  promptType String   @map("prompt_type")
+  template   String   @db.Text
+  variables  Json     @default("[]")
+  version    Int      @default(1)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([module])
+  @@index([promptType])
+  @@map("ai_prompt_templates")
+}
+
+enum AIAuditStatus {
+  SUCCESS
+  ERROR
+  FILTERED
+  REJECTED
+}
+
+model AIAuditLog {
+  id         String        @id @default(uuid())
+  tenantId   String        @map("tenant_id")
+  userId     String        @map("user_id")
+  module     String
+  action     String
+  prompt     String        @db.Text
+  response   String?       @db.Text
+  tokensUsed Int?          @map("tokens_used")
+  latencyMs  Int?          @map("latency_ms")
+  status     AIAuditStatus
+  metadata   Json          @default("{}")
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_audit_logs")
+}
+
+enum EntityType {
+  COMPETENCY
+  ROLE
+  DOCUMENT
+  FEEDBACK
+  REVIEW
+}
+
+model EmbeddingVector {
+  id         String     @id @default(uuid())
+  tenantId   String     @map("tenant_id")
+  entityType EntityType @map("entity_type")
+  entityId   String     @map("entity_id")
+  content    String     @db.Text
+  vector     Unsupported("vector(1536)")?
+  metadata   Json       @default("{}")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  competency  Competency?  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  roleProfile RoleProfile? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([entityType])
+  @@index([entityId])
+  @@map("embedding_vectors")
+}
+
+// ============================================================================
+// PERFORMANCE MANAGEMENT
+// ============================================================================
+
+enum ReviewCycleFrequency {
+  ANNUAL
+  SEMI_ANNUAL
+  QUARTERLY
+  MONTHLY
+  PROJECT_BASED
+  AD_HOC
+}
+
+enum ReviewCycleStatus {
+  DRAFT
+  ACTIVE
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+model ReviewCycle {
+  id          String               @id @default(uuid())
+  tenantId    String               @map("tenant_id")
+  name        String
+  description String?              @db.Text
+  frequency   ReviewCycleFrequency
+  status      ReviewCycleStatus    @default(DRAFT)
+  startDate   DateTime             @map("start_date")
+  endDate     DateTime             @map("end_date")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reviews Review[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("review_cycles")
+}
+
+enum ReviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  COMPLETED
+}
+
+model Review {
+  id            String       @id @default(uuid())
+  cycleId       String       @map("cycle_id")
+  employeeId    String       @map("employee_id")
+  managerId     String       @map("manager_id")
+  status        ReviewStatus @default(NOT_STARTED)
+  selfReview    String?      @db.Text @map("self_review")
+  managerReview String?      @db.Text @map("manager_review")
+  strengths     String?      @db.Text
+  areasForGrowth String?      @db.Text @map("areas_for_growth")
+  overallRating Int?         @map("overall_rating")
+  metadata      Json         @default("{}")
+  submittedAt   DateTime?    @map("submitted_at")
+  approvedAt    DateTime?    @map("approved_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  cycle    ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employee User        @relation("ReviewEmployee", fields: [employeeId], references: [id])
+  manager  User        @relation("ReviewManager", fields: [managerId], references: [id])
+
+  @@index([cycleId])
+  @@index([employeeId])
+  @@index([managerId])
+  @@map("reviews")
+}
+
+enum GoalStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+model Goal {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  roleProfileId String?     @map("role_profile_id")
+  title         String
+  description   String      @db.Text
+  targetDate    DateTime?   @map("target_date")
+  status        GoalStatus  @default(DRAFT)
+  progress      Int         @default(0)
+  metadata      Json        @default("{}")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleProfile RoleProfile? @relation(fields: [roleProfileId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("goals")
+}
+
+// ============================================================================
+// LEARNING & DEVELOPMENT
+// ============================================================================
+
+model SkillProfile {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  competencyId  String   @map("competency_id")
+  currentLevel  String   @map("current_level_id")
+  targetLevel   String?  @map("target_level_id")
+  assessedAt    DateTime @default(now()) @map("assessed_at")
+  assessedBy    String?  @map("assessed_by")
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competency  Competency       @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  current     ProficiencyLevel @relation(fields: [currentLevel], references: [id])
+
+  @@index([userId])
+  @@index([competencyId])
+  @@map("skill_profiles")
+}
+
+enum AssetType {
+  COURSE
+  BOOK
+  ARTICLE
+  VIDEO
+  WORKSHOP
+  MENTORING
+  CERTIFICATION
+  OTHER
+}
+
+model LearningAsset {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  title       String
+  description String?   @db.Text
+  type        AssetType
+  url         String?
+  duration    Int?
+  provider    String?
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([type])
+  @@map("learning_assets")
+}
+
+enum DevelopmentPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model DevelopmentPlan {
+  id          String                @id @default(uuid())
+  tenantId    String                @map("tenant_id")
+  userId      String                @map("user_id")
+  title       String
+  description String?               @db.Text
+  status      DevelopmentPlanStatus @default(DRAFT)
+  startDate   DateTime?             @map("start_date")
+  targetDate  DateTime?             @map("target_date")
+  actions     Json                  @default("[]")
+  progress    Int                   @default(0)
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@map("development_plans")
+}
+
+// ============================================================================
+// FEEDBACK & 360
+// ============================================================================
+
+enum FeedbackType {
+  POSITIVE
+  CONSTRUCTIVE
+  GENERAL
+  PEER_360
+}
+
+model FeedbackItem {
+  id         String       @id @default(uuid())
+  tenantId   String       @map("tenant_id")
+  giverId    String       @map("giver_id")
+  receiverId String       @map("receiver_id")
+  type       FeedbackType
+  context    String?
+  text       String       @db.Text
+  isAnonymous Boolean      @default(false) @map("is_anonymous")
+  sentiment  String?
+  themes     String[]     @default([])
+  metadata   Json         @default("{}")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  giver    User   @relation("FeedbackGiver", fields: [giverId], references: [id])
+  receiver User   @relation("FeedbackReceiver", fields: [receiverId], references: [id])
+
+  @@index([tenantId])
+  @@index([giverId])
+  @@index([receiverId])
+  @@map("feedback_items")
+}
+
+// ============================================================================
+// RECRUITMENT (Optional - Stage 1 Basic Support)
+// ============================================================================
+
+enum JDStatus {
+  DRAFT
+  ACTIVE
+  FILLED
+  ARCHIVED
+}
+
+model JobDescription {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  title       String
+  department  String
+  description String   @db.Text
+  requirements String?  @db.Text
+  status      JDStatus @default(DRAFT)
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("job_descriptions")
+}

@@ -1,0 +1,77 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import config from './config';
+import logger, { apiLogger } from './utils/logger';
+import routes from './routes';
+import { errorHandler, notFoundHandler } from './middleware/error-handler';
+import { globalRateLimiter } from './middleware/rate-limit';
+
+const app = express();
+
+// Security middleware
+app.use(helmet());
+app.use(cors(config.cors));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting
+app.use(globalRateLimiter);
+
+// Request logging
+app.use((req, res, next) => {
+  apiLogger.info('Incoming request', {
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+  });
+  next();
+});
+
+// API routes
+app.use(`/api/${config.apiVersion}`, routes);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Welcome to CLEAR-TALENT API',
+    version: config.apiVersion,
+    documentation: '/api/v1/health',
+  });
+});
+
+// Error handling
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+// Start server
+const server = app.listen(config.port, () => {
+  logger.info(`🚀 Server started`, {
+    port: config.port,
+    env: config.env,
+    apiVersion: config.apiVersion,
+  });
+  logger.info(`📍 API available at http://localhost:${config.port}/api/${config.apiVersion}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+export default app;
