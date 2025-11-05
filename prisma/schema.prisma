@@ -16,61 +16,73 @@ datasource db {
 // ============================================================================
 
 model Tenant {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  name             String
+  slug             String   @unique
+  settings         Json     @default("{}")
+  isActive         Boolean  @default(true) @map("is_active")
+  onboardingStatus String   @default("pending") @map("onboarding_status") // pending, in_progress, completed
+  logo             String?
+  primaryColor     String?  @map("primary_color")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
-  users              User[]
-  competencies       Competency[]
-  roleProfiles       RoleProfile[]
-  aiAuditLogs        AIAuditLog[]
-  embeddingVectors   EmbeddingVector[]
-  reviewCycles       ReviewCycle[]
-  feedbackItems      FeedbackItem[]
-  learningAssets     LearningAsset[]
-  developmentPlans   DevelopmentPlan[]
-  jobDescriptions    JobDescription[]
+  users                User[]
+  competencies         Competency[]
+  roleProfiles         RoleProfile[]
+  aiAuditLogs          AIAuditLog[]
+  embeddingVectors     EmbeddingVector[]
+  reviewCycles         ReviewCycle[]
+  feedbackItems        FeedbackItem[]
+  learningAssets       LearningAsset[]
+  developmentPlans     DevelopmentPlan[]
+  jobDescriptions      JobDescription[]
+  organizationalGoals  OrganizationalGoal[]
+  performanceImprovementPlans PerformanceImprovementPlan[]
 
   @@map("tenants")
 }
 
 enum UserRole {
-  ADMIN
-  HR_MANAGER
-  MANAGER
-  EMPLOYEE
+  SYSTEM_ADMIN      // CLEARTalent global admin
+  ADMIN             // Client HR owner (formerly HR_ADMIN)
+  DEPARTMENT_HEAD   // Strategic leader
+  MANAGER           // People leader
+  EMPLOYEE          // Individual contributor
+  REVIEWER          // Feedback provider / Peer reviewer
+  HR_MANAGER        // Deprecated - use ADMIN
 }
 
 model User {
-  id           String   @id @default(uuid())
-  tenantId     String   @map("tenant_id")
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  role         UserRole
-  department   String?
-  position     String?
-  aiOptOut     Boolean  @default(false) @map("ai_opt_out")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  tenantId          String?  @map("tenant_id") // Nullable for SYSTEM_ADMIN
+  email             String   @unique
+  passwordHash      String   @map("password_hash")
+  firstName         String   @map("first_name")
+  lastName          String   @map("last_name")
+  role              UserRole
+  department        String?
+  position          String?
+  potentialRating   Int?     @map("potential_rating") // 1-3 for 9-box matrix
+  aiOptOut          Boolean  @default(false) @map("ai_opt_out")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdCompetencies    Competency[]       @relation("CompetencyCreator")
-  createdRoleProfiles    RoleProfile[]      @relation("RoleProfileCreator")
-  aiAuditLogs            AIAuditLog[]
-  managedReviews         Review[]           @relation("ReviewManager")
-  receivedReviews        Review[]           @relation("ReviewEmployee")
-  createdGoals           Goal[]
-  skillProfiles          SkillProfile[]
-  developmentPlans       DevelopmentPlan[]
-  feedbackGiven          FeedbackItem[]     @relation("FeedbackGiver")
-  feedbackReceived       FeedbackItem[]     @relation("FeedbackReceiver")
+  tenant                        Tenant?                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdCompetencies           Competency[]                 @relation("CompetencyCreator")
+  createdRoleProfiles           RoleProfile[]                @relation("RoleProfileCreator")
+  aiAuditLogs                   AIAuditLog[]
+  managedReviews                Review[]                     @relation("ReviewManager")
+  receivedReviews               Review[]                     @relation("ReviewEmployee")
+  createdGoals                  Goal[]
+  skillProfiles                 SkillProfile[]
+  developmentPlans              DevelopmentPlan[]
+  feedbackGiven                 FeedbackItem[]               @relation("FeedbackGiver")
+  feedbackReceived              FeedbackItem[]               @relation("FeedbackReceiver")
+  performanceImprovementPlans   PerformanceImprovementPlan[] @relation("PIPEmployee")
+  createdOrganizationalGoals    OrganizationalGoal[]         @relation("OrgGoalCreator")
 
   @@index([tenantId])
   @@index([email])
@@ -564,4 +576,81 @@ model JobDescription {
   @@index([tenantId])
   @@index([status])
   @@map("job_descriptions")
+}
+
+// ============================================================================
+// ORGANIZATIONAL GOALS & CASCADING
+// ============================================================================
+
+enum GoalLevel {
+  ORGANIZATIONAL
+  DEPARTMENTAL
+  TEAM
+  INDIVIDUAL
+}
+
+model OrganizationalGoal {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  title       String
+  description String?   @db.Text
+  level       GoalLevel
+  department  String?
+  parentId    String?   @map("parent_id") // For cascading goals
+  weight      Int?      // Percentage weight
+  targetDate  DateTime? @map("target_date")
+  status      GoalStatus @default(DRAFT)
+  createdBy   String    @map("created_by")
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator       User                 @relation("OrgGoalCreator", fields: [createdBy], references: [id])
+  parent        OrganizationalGoal?  @relation("GoalHierarchy", fields: [parentId], references: [id])
+  children      OrganizationalGoal[] @relation("GoalHierarchy")
+
+  @@index([tenantId])
+  @@index([level])
+  @@index([parentId])
+  @@map("organizational_goals")
+}
+
+// ============================================================================
+// PERFORMANCE IMPROVEMENT PLANS (PIP)
+// ============================================================================
+
+enum PIPStatus {
+  ACTIVE
+  ON_TRACK
+  AT_RISK
+  COMPLETED
+  TERMINATED
+}
+
+model PerformanceImprovementPlan {
+  id               String    @id @default(uuid())
+  tenantId         String    @map("tenant_id")
+  employeeId       String    @map("employee_id")
+  managerId        String    @map("manager_id")
+  status           PIPStatus @default(ACTIVE)
+  startDate        DateTime  @map("start_date")
+  endDate          DateTime  @map("end_date")
+  objectives       Json      @default("[]") // Array of improvement objectives
+  checkIns         Json      @default("[]") // Array of check-in records
+  finalOutcome     String?   @db.Text @map("final_outcome")
+  closureDate      DateTime? @map("closure_date")
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee User   @relation("PIPEmployee", fields: [employeeId], references: [id])
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("performance_improvement_plans")
 }

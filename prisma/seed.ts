@@ -6,6 +6,24 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting database seed...');
 
+  // Create SYSTEM_ADMIN (platform super admin)
+  const systemAdminPasswordHash = await bcrypt.hash('ClearTalent@2025', 10);
+  const systemAdmin = await prisma.user.upsert({
+    where: { email: 'sysadmin@cleartalent.io' },
+    update: {},
+    create: {
+      email: 'sysadmin@cleartalent.io',
+      passwordHash: systemAdminPasswordHash,
+      firstName: 'System',
+      lastName: 'Administrator',
+      role: 'SYSTEM_ADMIN',
+      tenantId: null, // System admin is not tied to any tenant
+      aiOptOut: false,
+    },
+  });
+
+  console.log('✓ Created system admin:', systemAdmin.email);
+
   // Create demo tenant
   const demoTenant = await prisma.tenant.upsert({
     where: { slug: 'demo-org' },
@@ -19,6 +37,8 @@ async function main() {
         language: 'en',
         custom_prompts: {},
       },
+      onboardingStatus: 'completed',
+      isActive: true,
     },
   });
 

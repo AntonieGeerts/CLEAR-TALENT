@@ -5,26 +5,37 @@ import aiRoutes from './ai-routes';
 import roleRoutes from './role-routes';
 import workflowRoutes from './workflow-routes';
 import setupRoutes from './setup-routes';
+import tenantRoutes from './tenant-routes';
+import organizationalGoalsRoutes from './organizational-goals-routes';
+import pipRoutes from './pip-routes';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-// Health check
+// Health check (public)
 router.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'CLEAR-TALENT API is running',
+    message: 'CLEARTalent API is running',
     timestamp: new Date().toISOString(),
-    version: '0.2.0', // Updated to Stage 2
-    stage: 'Stage 2 - AI-Assisted Workflows',
+    version: '1.0.0',
+    stage: 'Production - Multi-Tenant PMDS',
   });
 });
 
-// Mount route modules
+// Public routes
 router.use('/auth', authRoutes);
-router.use('/competencies', competencyRoutes);
-router.use('/roles', roleRoutes);
-router.use('/ai', aiRoutes);
-router.use('/workflows', workflowRoutes);
 router.use('/setup', setupRoutes);
+
+// Protected routes (require authentication)
+router.use('/competencies', authenticate, competencyRoutes);
+router.use('/roles', authenticate, roleRoutes);
+router.use('/ai', authenticate, aiRoutes);
+router.use('/workflows', authenticate, workflowRoutes);
+router.use('/organizational-goals', authenticate, organizationalGoalsRoutes);
+router.use('/pips', authenticate, pipRoutes);
+
+// System Admin routes
+router.use('/tenants', authenticate, tenantRoutes);
 
 export default router;
