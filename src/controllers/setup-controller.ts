@@ -10,7 +10,9 @@ export class SetupController {
    */
   static async runMigrations(req: Request, res: Response) {
     try {
-      const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
+      const { databaseUrl } = req.body;
+      const env = databaseUrl ? { ...process.env, DATABASE_URL: databaseUrl } : process.env;
+      const { stdout, stderr } = await execAsync('npx prisma migrate deploy', { env });
 
       res.json({
         success: true,
@@ -35,7 +37,9 @@ export class SetupController {
    */
   static async seedDatabase(req: Request, res: Response) {
     try {
-      const { stdout, stderr } = await execAsync('npx prisma db seed');
+      const { databaseUrl } = req.body;
+      const env = databaseUrl ? { ...process.env, DATABASE_URL: databaseUrl } : process.env;
+      const { stdout, stderr } = await execAsync('npx prisma db seed', { env });
 
       res.json({
         success: true,
@@ -60,11 +64,13 @@ export class SetupController {
    */
   static async initializeDatabase(req: Request, res: Response) {
     try {
+      const { databaseUrl } = req.body;
+      const env = databaseUrl ? { ...process.env, DATABASE_URL: databaseUrl } : process.env;
       const results: any[] = [];
 
       // Run migrations
       try {
-        const { stdout: migrateOutput } = await execAsync('npx prisma migrate deploy');
+        const { stdout: migrateOutput } = await execAsync('npx prisma migrate deploy', { env });
         results.push({ step: 'migrations', status: 'success', output: migrateOutput });
       } catch (error: any) {
         results.push({
@@ -77,7 +83,7 @@ export class SetupController {
 
       // Run seed
       try {
-        const { stdout: seedOutput } = await execAsync('npx prisma db seed');
+        const { stdout: seedOutput } = await execAsync('npx prisma db seed', { env });
         results.push({ step: 'seed', status: 'success', output: seedOutput });
       } catch (error: any) {
         results.push({
