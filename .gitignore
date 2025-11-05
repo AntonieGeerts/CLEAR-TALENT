@@ -55,3 +55,18 @@ public/uploads/
 
 # Redis dump
 dump.rdb
+
+# Deployment scripts and artifacts
+deploy-*.py
+*.py
+app-deployment*.zip
+database-credentials.txt
+check-*.py
+create-*.py
+list-*.py
+setup-*.py
+try-*.py
+update-*.py
+verify-*.py
+final-*.py
+Dockerfile.simple
