@@ -14,7 +14,7 @@ export interface LoginResponse {
     firstName: string;
     lastName: string;
     role: string;
-    tenantId: string;
+    tenantId: string | null;
   };
   token: string;
   refreshToken: string;
@@ -22,7 +22,7 @@ export interface LoginResponse {
 
 export interface TokenPayload {
   userId: string;
-  tenantId: string;
+  tenantId: string | null;
   role: string;
   email: string;
 }

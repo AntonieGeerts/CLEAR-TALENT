@@ -38,7 +38,7 @@ export const authenticate = async (
 
     // Attach user and tenant to request
     req.user = user as any;
-    req.tenant = user.tenant;
+    req.tenant = user.tenant || undefined;
 
     next();
   } catch (error) {
