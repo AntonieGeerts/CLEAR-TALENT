@@ -1,7 +1,7 @@
 import { AIProvider, CompletionOptions, PromptVariables, AIServiceError } from '../../types';
 import { OpenAIProvider } from './openai-provider';
 import { PromptManager } from './prompt-manager';
-import { AuditService } from './audit-service';
+import { AuditService, AIAuditStatus } from './audit-service';
 import { PIIDetector } from '../../utils/pii-detector';
 import config from '../../config';
 import { aiLogger } from '../../utils/logger';
@@ -87,7 +87,7 @@ export class LLMOrchestrator {
           response,
           tokensUsed: this.estimateTokens(processedPrompt, response),
           latencyMs: latency,
-          status: 'SUCCESS',
+          status: AIAuditStatus.SUCCESS,
         });
       }
 
@@ -104,7 +104,7 @@ export class LLMOrchestrator {
           action: context.action,
           prompt: prompt.substring(0, 500), // Truncate for error logs
           latencyMs: latency,
-          status: 'ERROR',
+          status: AIAuditStatus.FAILURE,
           metadata: {
             error: error instanceof Error ? error.message : 'Unknown error',
           },
@@ -181,7 +181,7 @@ export class LLMOrchestrator {
           module: context.module,
           action: 'generate-embedding',
           prompt: processedText.substring(0, 200),
-          status: 'SUCCESS',
+          status: AIAuditStatus.SUCCESS,
         });
       }
 

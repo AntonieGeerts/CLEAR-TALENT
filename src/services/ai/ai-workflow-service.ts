@@ -50,7 +50,7 @@ export class AIWorkflowService {
 
       // Build context
       const competenciesList = roleProfile.roleCompetencies
-        .map((rc) => `- ${rc.competency.name} (${rc.level.name} level)`)
+        .map((rc: any) => `- ${rc.competency.name} (${rc.level.name} level)`)
         .join('\n');
 
       const prompt = `Generate 3-5 SMART goals or OKRs for an employee in the following role:
@@ -134,7 +134,7 @@ Return as a JSON array.`;
 
       for (const required of targetCompetencies) {
         const current = skillProfiles.find(
-          (sp) => sp.competencyId === required.competencyId
+          (sp: any) => sp.competencyId === required.competencyId
         );
 
         const currentLevel = current?.current.numericLevel || 0;
