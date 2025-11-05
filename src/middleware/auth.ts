@@ -37,7 +37,7 @@ export const authenticate = async (
     }
 
     // Attach user and tenant to request
-    req.user = user;
+    req.user = user as any;
     req.tenant = user.tenant;
 
     next();

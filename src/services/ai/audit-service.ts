@@ -1,15 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AIAuditStatus } from '@prisma/client';
 import { aiLogger } from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
-// Define AIAuditStatus enum locally (matches Prisma schema)
-export enum AIAuditStatus {
-  SUCCESS = 'SUCCESS',
-  FAILURE = 'FAILURE',
-  PARTIAL = 'PARTIAL',
-  PENDING = 'PENDING'
-}
+// Re-export AIAuditStatus from Prisma
+export { AIAuditStatus };
 
 export interface AuditLogData {
   tenantId: string;
@@ -41,7 +36,7 @@ export class AuditService {
           tokensUsed: data.tokensUsed,
           latencyMs: data.latencyMs,
           status: data.status,
-          metadata: data.metadata || {},
+          metadata: (data.metadata || {}) as any,
         },
       });
 
