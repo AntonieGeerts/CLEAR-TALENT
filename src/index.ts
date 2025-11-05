@@ -47,14 +47,46 @@ app.get('/', (req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Auto-initialize database
+async function initializeDatabase() {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      logger.info('🌱 No users found - initializing database...');
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      try {
+        await execAsync('npx prisma db seed');
+        logger.info('✅ Database seeded successfully');
+      } catch (err: any) {
+        logger.warn(`⚠️  Seed warning: ${err.message}`);
+      }
+    } else {
+      logger.info(`✅ Database ready (${userCount} users found)`);
+    }
+
+    await prisma.$disconnect();
+  } catch (error: any) {
+    logger.error(`Database check failed: ${error.message}`);
+  }
+}
+
 // Start server
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, async () => {
   logger.info(`🚀 Server started`, {
     port: config.port,
     env: config.env,
     apiVersion: config.apiVersion,
   });
   logger.info(`📍 API available at http://localhost:${config.port}/api/${config.apiVersion}`);
+
+  // Initialize database
+  await initializeDatabase();
 });
 
 // Graceful shutdown
