@@ -7,9 +7,8 @@ generator client {
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [vector]
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ============================================================================
@@ -287,7 +286,7 @@ model EmbeddingVector {
   entityType EntityType @map("entity_type")
   entityId   String     @map("entity_id")
   content    String     @db.Text
-  vector     Unsupported("vector(1536)")?
+  vectorData String?    @map("vector_data") @db.Text
   metadata   Json       @default("{}")
   createdAt  DateTime   @default(now()) @map("created_at")
 
