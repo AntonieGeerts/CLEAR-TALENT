@@ -70,3 +70,6 @@ update-*.py
 verify-*.py
 final-*.py
 Dockerfile.simple
+
+# Railway deployment with API token
+DEPLOY_WITH_TOKEN.sh
