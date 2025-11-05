@@ -104,7 +104,7 @@ export class LLMOrchestrator {
           action: context.action,
           prompt: prompt.substring(0, 500), // Truncate for error logs
           latencyMs: latency,
-          status: AIAuditStatus.FAILURE,
+          status: AIAuditStatus.ERROR,
           metadata: {
             error: error instanceof Error ? error.message : 'Unknown error',
           },
