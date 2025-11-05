@@ -6,25 +6,66 @@ Performance Management & Development System (PMDS) with AI Integration
 
 CLEAR-TALENT is a comprehensive cloud-based HR platform that leverages AI to transform performance management, learning & development, feedback, recruitment, and appraisal processes. The platform features an intelligent competency library, AI-powered insights, and automated workflow assistance.
 
-## Features (Stage 1 - MVP)
+## Features (Stage 1 + Stage 2)
 
-### AI Competency Library Builder
+### Stage 1: AI Foundations ✅
+
+#### AI Competency Library Builder
 - Parse job descriptions and automatically suggest relevant competencies
 - Generate behavioral indicators across multiple proficiency levels
 - Create role profiles with linked competencies
 - Multi-language support for global organizations
 
-### AI-Powered Text Operations
+#### AI-Powered Text Operations
 - Improve review feedback (make constructive, specific, structured)
 - Summarize long-form feedback and comments
 - Rewrite content with different tones and styles
 
-### Security & Governance
+#### Security & Governance
 - Role-based access control (RBAC)
 - Tenant-based data isolation
 - Complete audit trail for all AI operations
 - PII detection and redaction
 - User opt-out controls
+
+### Stage 2: AI-Assisted Workflows ✅
+
+#### Role-Based Competency Templates (S2.1)
+- Create role profiles with competency requirements
+- Version control for role templates
+- Clone and customize existing roles
+- Link competencies with required proficiency levels
+
+#### AI Goal/OKR Suggestions (S2.2)
+- Generate SMART goals based on role requirements
+- Create OKRs with key results
+- Personalized based on performance data and career aspirations
+- Priority-based goal recommendations
+
+#### AI Skill-Gap Detection (S2.3)
+- Compare employee skills against role requirements
+- Identify competency gaps with severity levels
+- AI-generated recommendations to close gaps
+- Prioritized development focus areas
+
+#### AI-Generated IDPs (S2.4)
+- Comprehensive Individual Development Plans
+- Structured learning phases with timelines
+- Actionable development activities
+- Resource and support requirements
+- Milestone tracking
+
+#### Sentiment & Theme Analysis (S2.5)
+- Extract sentiment from feedback (positive/neutral/negative)
+- Identify common themes and patterns
+- Aggregate insights across multiple feedback items
+- Strength and improvement area identification
+
+#### Learning Path Suggestions (S2.6)
+- Structured competency development paths
+- Phase-based learning progression
+- Quick wins and long-term activities
+- Resource and assessment recommendations
 
 ## Technology Stack
 
@@ -280,7 +321,7 @@ Key variables:
 
 ## Development Roadmap
 
-### Stage 1 - AI Foundations (Current)
+### Stage 1 - AI Foundations ✅ COMPLETE
 - ✅ Central AI engine setup
 - ✅ AI Competency Library Builder
 - ✅ AI JD parser
@@ -288,15 +329,15 @@ Key variables:
 - ✅ AI review text helper
 - ✅ Security & logging
 
-### Stage 2 - AI-Assisted Workflows (Planned)
-- Role-based competency templates
-- AI goal/OKR suggestions
-- Skill-gap detection
-- AI-generated Individual Development Plans
-- Sentiment & theme extraction
-- Learning path suggestions
+### Stage 2 - AI-Assisted Workflows ✅ COMPLETE
+- ✅ Role-based competency templates with versioning
+- ✅ AI goal/OKR suggestions
+- ✅ Skill-gap detection from reviews
+- ✅ AI-generated Individual Development Plans (IDPs)
+- ✅ Sentiment & theme extraction for feedback
+- ✅ Learning path suggestions linked to competencies
 
-### Stage 3 - Predictive Insights (Future)
+### Stage 3 - Predictive Insights (Planned)
 - Performance risk profiling
 - Attrition risk indicators
 - Calibration support

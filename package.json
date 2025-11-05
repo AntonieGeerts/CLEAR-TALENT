@@ -1,7 +1,7 @@
 {
   "name": "clear-talent",
-  "version": "0.1.0",
-  "description": "Performance Management & Development System with AI Integration",
+  "version": "0.2.0",
+  "description": "Performance Management & Development System with AI Integration - Stage 2",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
