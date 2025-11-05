@@ -37,10 +37,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const storedUser = localStorage.getItem('user');
     const storedTenant = localStorage.getItem('tenant');
 
-    if (token && storedUser && storedTenant) {
+    if (token && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
-        setTenant(JSON.parse(storedTenant));
+        if (storedTenant) {
+          setTenant(JSON.parse(storedTenant));
+        }
       } catch (error) {
         console.error('Failed to parse stored auth data', error);
         logout();
@@ -55,10 +57,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      localStorage.setItem('tenant', JSON.stringify(response.tenant));
+
+      // Tenant might not be in response, create a minimal one from user data
+      const tenant = response.tenant || {
+        id: response.user.tenantId,
+        name: 'Organization',
+        slug: 'org'
+      };
+      localStorage.setItem('tenant', JSON.stringify(tenant));
 
       setUser(response.user);
-      setTenant(response.tenant);
+      setTenant(tenant);
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
     }
@@ -70,10 +79,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      localStorage.setItem('tenant', JSON.stringify(response.tenant));
+
+      // Tenant might not be in response, create a minimal one from user data
+      const tenant = response.tenant || {
+        id: response.user.tenantId,
+        name: 'Organization',
+        slug: 'org'
+      };
+      localStorage.setItem('tenant', JSON.stringify(tenant));
 
       setUser(response.user);
-      setTenant(response.tenant);
+      setTenant(tenant);
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Registration failed');
     }

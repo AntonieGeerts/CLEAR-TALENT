@@ -41,17 +41,20 @@ class ApiService {
   // Auth
   async login(email: string, password: string) {
     const response = await this.api.post('/auth/login', { email, password });
-    return response.data;
+    // Backend wraps response in { success, data, timestamp }
+    return response.data.data;
   }
 
   async register(data: { email: string; password: string; name: string; role?: string }) {
     const response = await this.api.post('/auth/register', data);
-    return response.data;
+    // Backend wraps response in { success, data, timestamp }
+    return response.data.data;
   }
 
   async getCurrentUser() {
     const response = await this.api.get('/auth/me');
-    return response.data;
+    // Backend wraps response in { success, data, timestamp }
+    return response.data.data;
   }
 
   // Competencies
