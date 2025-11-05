@@ -74,6 +74,15 @@ export class OrganizationalGoalsController {
   static async getGoalTree(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
 
+    // Define the nested include structure for the full goal hierarchy
+    const includeCreator = {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    };
+
     // Get all organizational-level goals with their full hierarchy
     const orgGoals = await prisma.organizationalGoal.findMany({
       where: {
@@ -82,20 +91,20 @@ export class OrganizationalGoalsController {
         parentId: null,
       },
       include: {
+        creator: includeCreator,
         children: {
           include: {
+            creator: includeCreator,
             children: {
               include: {
-                children: true,
+                creator: includeCreator,
+                children: {
+                  include: {
+                    creator: includeCreator,
+                  },
+                },
               },
             },
-          },
-        },
-        creator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
           },
         },
       },

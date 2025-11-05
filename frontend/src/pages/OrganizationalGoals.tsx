@@ -13,7 +13,7 @@ interface OrganizationalGoal {
   targetDate?: string;
   status: string;
   children?: OrganizationalGoal[];
-  creator: {
+  creator?: {
     firstName: string;
     lastName: string;
   };
@@ -181,7 +181,9 @@ const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild
                 <p className="text-sm opacity-90 mb-2">{goal.description}</p>
               )}
               <div className="flex items-center gap-4 text-xs opacity-75">
-                <span>Created by: {goal.creator.firstName} {goal.creator.lastName}</span>
+                {goal.creator && (
+                  <span>Created by: {goal.creator.firstName} {goal.creator.lastName}</span>
+                )}
                 {goal.targetDate && (
                   <span>Target: {new Date(goal.targetDate).toLocaleDateString()}</span>
                 )}
