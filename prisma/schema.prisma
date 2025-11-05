@@ -293,8 +293,8 @@ model EmbeddingVector {
 
   // Relations
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  competency  Competency?  @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  roleProfile RoleProfile? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  competency  Competency?  @relation(fields: [entityId], references: [id], onDelete: Cascade, map: "embedding_vectors_competency_fkey")
+  roleProfile RoleProfile? @relation(fields: [entityId], references: [id], onDelete: Cascade, map: "embedding_vectors_role_profile_fkey")
 
   @@index([tenantId])
   @@index([entityType])

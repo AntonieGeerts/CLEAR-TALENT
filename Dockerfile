@@ -2,7 +2,7 @@
 FROM node:18-alpine
 
 # Install system dependencies
-RUN apk add --no-cache python3 make g++ postgresql-client
+RUN apk add --no-cache python3 make g++ postgresql-client openssl
 
 # Set working directory
 WORKDIR /app
