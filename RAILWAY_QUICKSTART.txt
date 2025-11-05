@@ -1,0 +1,66 @@
+🚀 RAILWAY DEPLOYMENT - QUICK COMMANDS
+=======================================
+
+Run these commands in order on your local machine:
+
+1. INSTALL CLI
+--------------
+npm install -g @railway/cli
+
+2. LOGIN
+--------
+railway login
+
+3. INITIALIZE
+-------------
+railway init
+
+4. ADD DATABASE
+---------------
+railway add -d postgres
+
+5. SET ENVIRONMENT VARIABLES
+-----------------------------
+railway variables set NODE_ENV="production"
+railway variables set JWT_SECRET="664bfacd7a5a149fc262983e2f6178143f55a1741c1ea8cbb569edfc5d117223"
+railway variables set OPENAI_API_KEY="YOUR_OPENAI_API_KEY_HERE"
+railway variables set OPENAI_MODEL="gpt-4o-mini"
+railway variables set AI_ENABLED="true"
+railway variables set LOG_LEVEL="info"
+
+6. DEPLOY
+---------
+railway up
+
+7. ENABLE PGVECTOR
+------------------
+railway run psql $(railway variables get DATABASE_URL) -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+8. RUN MIGRATIONS
+-----------------
+railway run npx prisma migrate deploy
+
+9. SEED DATABASE
+----------------
+railway run npx prisma db seed
+
+10. GET URL
+-----------
+railway domain
+
+11. TEST
+--------
+curl https://YOUR_URL/api/v1/health
+
+DEMO LOGIN:
+Email: admin@demo-org.com
+Password: admin123
+
+DONE! 🎉
+
+View logs: railway logs
+Open dashboard: railway open
+Restart: railway restart
+
+Total time: ~10 minutes
+Cost: $5/month (first $5 free)
