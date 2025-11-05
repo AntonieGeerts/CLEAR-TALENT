@@ -10,11 +10,13 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
 .env.*.local
 YOUR_DEPLOYMENT_CONFIG.txt
+deploy-aws-preconfigured.sh
+YOUR_DEPLOYMENT_READY.md
 
 # IDE
 .vscode/
