@@ -73,3 +73,4 @@ Dockerfile.simple
 
 # Railway deployment with API token
 DEPLOY_WITH_TOKEN.sh
+YOUR_RAILWAY_PROJECT.md
