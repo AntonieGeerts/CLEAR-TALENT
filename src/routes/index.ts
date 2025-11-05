@@ -4,6 +4,7 @@ import competencyRoutes from './competency-routes';
 import aiRoutes from './ai-routes';
 import roleRoutes from './role-routes';
 import workflowRoutes from './workflow-routes';
+import setupRoutes from './setup-routes';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/competencies', competencyRoutes);
 router.use('/roles', roleRoutes);
 router.use('/ai', aiRoutes);
 router.use('/workflows', workflowRoutes);
+router.use('/setup', setupRoutes);
 
 export default router;
