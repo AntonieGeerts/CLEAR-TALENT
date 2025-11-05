@@ -8,6 +8,10 @@ const router = Router();
 
 router.get('/', asyncHandler(TenantController.getAllTenants));
 router.get('/stats', asyncHandler(TenantController.getTenantStats));
+
+// User management within tenant (must be before /:id to avoid conflicts)
+router.post('/:tenantId/users', asyncHandler(TenantController.createUserForTenant));
+
 router.get('/:id', asyncHandler(TenantController.getTenant));
 router.post('/', asyncHandler(TenantController.createTenant));
 router.put('/:id', asyncHandler(TenantController.updateTenant));

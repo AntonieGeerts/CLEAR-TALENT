@@ -25,7 +25,7 @@ const getNavItems = (userRole: string | undefined) => {
   // System Admin menu
   if (userRole === 'SYSTEM_ADMIN') {
     items.push(
-      { to: '/system-admin', icon: Building2, label: 'Tenant Management', roles: ['SYSTEM_ADMIN'] },
+      { to: '/admin', icon: Building2, label: 'Tenant Management', roles: ['SYSTEM_ADMIN'] },
     );
   }
 

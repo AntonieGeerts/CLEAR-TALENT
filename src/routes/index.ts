@@ -6,6 +6,7 @@ import roleRoutes from './role-routes';
 import workflowRoutes from './workflow-routes';
 import setupRoutes from './setup-routes';
 import tenantRoutes from './tenant-routes';
+import userRoutes from './user-routes';
 import organizationalGoalsRoutes from './organizational-goals-routes';
 import pipRoutes from './pip-routes';
 import { authenticate } from '../middleware/auth';
@@ -37,5 +38,6 @@ router.use('/pips', authenticate, pipRoutes);
 
 // System Admin routes
 router.use('/tenants', authenticate, tenantRoutes);
+router.use('/users', authenticate, userRoutes);
 
 export default router;

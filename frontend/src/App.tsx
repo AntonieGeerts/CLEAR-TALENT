@@ -11,6 +11,7 @@ import { Goals } from './pages/Goals';
 import { SkillGaps } from './pages/SkillGaps';
 import { IDPs } from './pages/IDPs';
 import { SystemAdminDashboard } from './pages/SystemAdminDashboard';
+import { TenantDetail } from './pages/TenantDetail';
 import { OrganizationalGoals } from './pages/OrganizationalGoals';
 import { PIPs } from './pages/PIPs';
 
@@ -84,7 +85,8 @@ function AppRoutes() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="system-admin" element={<SystemAdminDashboard />} />
+        <Route path="admin" element={<SystemAdminDashboard />} />
+        <Route path="admin/tenants/:tenantId" element={<TenantDetail />} />
         <Route path="organizational-goals" element={<OrganizationalGoals />} />
         <Route path="pips" element={<PIPs />} />
         <Route path="competencies" element={<Competencies />} />

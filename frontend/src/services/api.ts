@@ -231,6 +231,45 @@ class ApiService {
   }
 
   // ============================================================================
+  // USER MANAGEMENT (within Tenant - System Admin)
+  // ============================================================================
+
+  async createUserForTenant(tenantId: string, data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+    role: string;
+    department?: string;
+    position?: string;
+  }) {
+    const response = await this.api.post(`/tenants/${tenantId}/users`, data);
+    return response.data.data;
+  }
+
+  async updateUser(userId: string, data: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    department?: string;
+    position?: string;
+  }) {
+    const response = await this.api.put(`/users/${userId}`, data);
+    return response.data.data;
+  }
+
+  async deleteUser(userId: string) {
+    const response = await this.api.delete(`/users/${userId}`);
+    return response.data;
+  }
+
+  async resetUserPassword(userId: string, newPassword: string) {
+    const response = await this.api.post(`/users/${userId}/reset-password`, { newPassword });
+    return response.data;
+  }
+
+  // ============================================================================
   // ORGANIZATIONAL GOALS
   // ============================================================================
 

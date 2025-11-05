@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2, Users, TrendingUp, Activity, Plus, Search } from 'lucide-react';
 import { apiService } from '../services/api';
 
@@ -24,6 +25,7 @@ interface Stats {
 }
 
 export const SystemAdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,7 +196,10 @@ export const SystemAdminDashboard: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                    <button
+                      onClick={() => navigate(`/admin/tenants/${tenant.id}`)}
+                      className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                    >
                       Manage
                     </button>
                   </td>

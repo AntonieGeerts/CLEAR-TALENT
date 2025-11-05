@@ -301,4 +301,224 @@ export class TenantController {
       timestamp: new Date().toISOString(),
     });
   }
+
+  /**
+   * Create user for a specific tenant (SYSTEM_ADMIN only)
+   */
+  static async createUserForTenant(req: AuthRequest, res: Response) {
+    if (req.user?.role !== 'SYSTEM_ADMIN') {
+      throw new AuthorizationError('Only system administrators can create users for tenants');
+    }
+
+    const { tenantId } = req.params;
+    const {
+      email,
+      firstName,
+      lastName,
+      password,
+      role = 'EMPLOYEE',
+      department,
+      position,
+    } = req.body;
+
+    if (!email || !firstName || !lastName || !password) {
+      throw new ValidationError('Email, first name, last name, and password are required');
+    }
+
+    // Check if tenant exists
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    if (!tenant) {
+      throw new ValidationError('Tenant not found');
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ValidationError('User with this email already exists');
+    }
+
+    // Create user
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        tenantId,
+        email,
+        firstName,
+        lastName,
+        passwordHash,
+        role,
+        department,
+        position,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        department: user.department,
+        position: user.position,
+      },
+      message: 'User created successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Update user (SYSTEM_ADMIN only)
+   */
+  static async updateUser(req: AuthRequest, res: Response) {
+    if (req.user?.role !== 'SYSTEM_ADMIN') {
+      throw new AuthorizationError('Only system administrators can update users');
+    }
+
+    const { userId } = req.params;
+    const {
+      email,
+      firstName,
+      lastName,
+      role,
+      department,
+      position,
+    } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== user.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser) {
+        throw new ValidationError('Email already in use');
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(email && { email }),
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName }),
+        ...(role && { role }),
+        ...(department !== undefined && { department }),
+        ...(position !== undefined && { position }),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        role: updatedUser.role,
+        department: updatedUser.department,
+        position: updatedUser.position,
+      },
+      message: 'User updated successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Delete user (SYSTEM_ADMIN only)
+   */
+  static async deleteUser(req: AuthRequest, res: Response) {
+    if (req.user?.role !== 'SYSTEM_ADMIN') {
+      throw new AuthorizationError('Only system administrators can delete users');
+    }
+
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // Prevent deletion of system admin
+    if (user.role === 'SYSTEM_ADMIN') {
+      throw new ValidationError('Cannot delete system administrator');
+    }
+
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Reset user password (SYSTEM_ADMIN only)
+   */
+  static async resetUserPassword(req: AuthRequest, res: Response) {
+    if (req.user?.role !== 'SYSTEM_ADMIN') {
+      throw new AuthorizationError('Only system administrators can reset passwords');
+    }
+
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
 }
