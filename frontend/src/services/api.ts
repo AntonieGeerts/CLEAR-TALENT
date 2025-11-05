@@ -174,6 +174,179 @@ class ApiService {
     const response = await this.api.post('/ai/sentiment-analysis', data);
     return response.data;
   }
+
+  // ============================================================================
+  // TENANT MANAGEMENT (System Admin)
+  // ============================================================================
+
+  async getTenants(params?: { page?: number; limit?: number; status?: string; search?: string }) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.search) queryParams.append('search', params.search);
+
+    const response = await this.api.get(`/tenants?${queryParams.toString()}`);
+    return response.data.data;
+  }
+
+  async getTenant(id: string) {
+    const response = await this.api.get(`/tenants/${id}`);
+    return response.data.data;
+  }
+
+  async getTenantStats() {
+    const response = await this.api.get('/tenants/stats');
+    return response.data.data;
+  }
+
+  async createTenant(data: {
+    name: string;
+    slug: string;
+    adminEmail: string;
+    adminPassword: string;
+    adminFirstName: string;
+    adminLastName: string;
+    logo?: string;
+    primaryColor?: string;
+  }) {
+    const response = await this.api.post('/tenants', data);
+    return response.data.data;
+  }
+
+  async updateTenant(id: string, data: {
+    name?: string;
+    isActive?: boolean;
+    onboardingStatus?: string;
+    logo?: string;
+    primaryColor?: string;
+  }) {
+    const response = await this.api.put(`/tenants/${id}`, data);
+    return response.data.data;
+  }
+
+  async deactivateTenant(id: string) {
+    const response = await this.api.post(`/tenants/${id}/deactivate`);
+    return response.data.data;
+  }
+
+  // ============================================================================
+  // ORGANIZATIONAL GOALS
+  // ============================================================================
+
+  async getOrganizationalGoals(params?: {
+    level?: string;
+    department?: string;
+    parentId?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.level) queryParams.append('level', params.level);
+    if (params?.department) queryParams.append('department', params.department);
+    if (params?.parentId) queryParams.append('parentId', params.parentId);
+
+    const response = await this.api.get(`/organizational-goals?${queryParams.toString()}`);
+    return response.data.data;
+  }
+
+  async getOrganizationalGoalsTree() {
+    const response = await this.api.get('/organizational-goals/tree');
+    return response.data.data;
+  }
+
+  async getOrganizationalGoal(id: string) {
+    const response = await this.api.get(`/organizational-goals/${id}`);
+    return response.data.data;
+  }
+
+  async getGoalAlignmentReport() {
+    const response = await this.api.get('/organizational-goals/alignment-report');
+    return response.data.data;
+  }
+
+  async createOrganizationalGoal(data: {
+    title: string;
+    description?: string;
+    level: string;
+    department?: string;
+    parentId?: string;
+    weight?: number;
+    targetDate?: string;
+  }) {
+    const response = await this.api.post('/organizational-goals', data);
+    return response.data.data;
+  }
+
+  async updateOrganizationalGoal(id: string, data: {
+    title?: string;
+    description?: string;
+    department?: string;
+    weight?: number;
+    targetDate?: string;
+    status?: string;
+  }) {
+    const response = await this.api.put(`/organizational-goals/${id}`, data);
+    return response.data.data;
+  }
+
+  async deleteOrganizationalGoal(id: string) {
+    const response = await this.api.delete(`/organizational-goals/${id}`);
+    return response.data;
+  }
+
+  // ============================================================================
+  // PERFORMANCE IMPROVEMENT PLANS (PIPs)
+  // ============================================================================
+
+  async getPIPs(params?: { status?: string; employeeId?: string }) {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.employeeId) queryParams.append('employeeId', params.employeeId);
+
+    const response = await this.api.get(`/pips?${queryParams.toString()}`);
+    return response.data.data;
+  }
+
+  async getPIP(id: string) {
+    const response = await this.api.get(`/pips/${id}`);
+    return response.data.data;
+  }
+
+  async createPIP(data: {
+    employeeId: string;
+    startDate: string;
+    endDate: string;
+    objectives: any[];
+  }) {
+    const response = await this.api.post('/pips', data);
+    return response.data.data;
+  }
+
+  async updatePIP(id: string, data: {
+    status?: string;
+    objectives?: any[];
+    finalOutcome?: string;
+  }) {
+    const response = await this.api.put(`/pips/${id}`, data);
+    return response.data.data;
+  }
+
+  async addPIPCheckIn(id: string, data: {
+    date: string;
+    notes: string;
+    progress: number;
+    actionItems?: string[];
+  }) {
+    const response = await this.api.post(`/pips/${id}/check-in`, data);
+    return response.data.data;
+  }
+
+  async completePIP(id: string, data: {
+    finalOutcome: string;
+    successful: boolean;
+  }) {
+    const response = await this.api.post(`/pips/${id}/complete`, data);
+    return response.data.data;
+  }
 }
 
 export const apiService = new ApiService();

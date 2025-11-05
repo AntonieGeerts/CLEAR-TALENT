@@ -12,21 +12,42 @@ import {
   Menu,
   X,
   Sparkles,
+  Building2,
+  AlertTriangle,
+  FlagTriangleRight,
 } from 'lucide-react';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/competencies', icon: BookOpen, label: 'Competency Library' },
-  { to: '/roles', icon: Briefcase, label: 'Role Profiles' },
-  { to: '/goals', icon: Target, label: 'Goals & OKRs' },
-  { to: '/skill-gaps', icon: TrendingUp, label: 'Skill Gaps' },
-  { to: '/idps', icon: GraduationCap, label: 'IDPs' },
-];
+const getNavItems = (userRole: string | undefined) => {
+  const items = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['*'] },
+  ];
+
+  // System Admin menu
+  if (userRole === 'SYSTEM_ADMIN') {
+    items.push(
+      { to: '/system-admin', icon: Building2, label: 'Tenant Management', roles: ['SYSTEM_ADMIN'] },
+    );
+  }
+
+  // Common items for all authenticated users
+  items.push(
+    { to: '/organizational-goals', icon: FlagTriangleRight, label: 'Organizational Goals', roles: ['*'] },
+    { to: '/competencies', icon: BookOpen, label: 'Competency Library', roles: ['*'] },
+    { to: '/roles', icon: Briefcase, label: 'Role Profiles', roles: ['*'] },
+    { to: '/goals', icon: Target, label: 'Goals & OKRs', roles: ['*'] },
+    { to: '/pips', icon: AlertTriangle, label: 'PIPs', roles: ['*'] },
+    { to: '/skill-gaps', icon: TrendingUp, label: 'Skill Gaps', roles: ['*'] },
+    { to: '/idps', icon: GraduationCap, label: 'IDPs', roles: ['*'] },
+  );
+
+  return items;
+};
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, tenant, logout } = useAuth();
   const location = useLocation();
+  const navItems = getNavItems(user?.role);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -41,7 +62,7 @@ export const Layout: React.FC = () => {
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <Sparkles className="text-primary-600" size={24} />
-              <span className="text-xl font-bold text-gray-900">CLEAR-TALENT</span>
+              <span className="text-xl font-bold text-gray-900">CLEARTalent</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}

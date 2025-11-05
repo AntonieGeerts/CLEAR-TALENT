@@ -10,6 +10,9 @@ import { RoleProfiles } from './pages/RoleProfiles';
 import { Goals } from './pages/Goals';
 import { SkillGaps } from './pages/SkillGaps';
 import { IDPs } from './pages/IDPs';
+import { SystemAdminDashboard } from './pages/SystemAdminDashboard';
+import { OrganizationalGoals } from './pages/OrganizationalGoals';
+import { PIPs } from './pages/PIPs';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -81,6 +84,9 @@ function AppRoutes() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="system-admin" element={<SystemAdminDashboard />} />
+        <Route path="organizational-goals" element={<OrganizationalGoals />} />
+        <Route path="pips" element={<PIPs />} />
         <Route path="competencies" element={<Competencies />} />
         <Route path="roles" element={<RoleProfiles />} />
         <Route path="goals" element={<Goals />} />
