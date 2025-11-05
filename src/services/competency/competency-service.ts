@@ -1,9 +1,17 @@
-import { PrismaClient, CompetencyType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { NotFoundError } from '../../types';
 import { apiLogger } from '../../utils/logger';
 import { CreateCompetencyInput, UpdateCompetencyInput, CompetencyQuery } from '../../utils/validators';
 
 const prisma = new PrismaClient();
+
+// Define CompetencyType enum locally (matches Prisma schema)
+enum CompetencyType {
+  TECHNICAL = 'TECHNICAL',
+  BEHAVIORAL = 'BEHAVIORAL',
+  LEADERSHIP = 'LEADERSHIP',
+  FUNCTIONAL = 'FUNCTIONAL'
+}
 
 export class CompetencyService {
   /**

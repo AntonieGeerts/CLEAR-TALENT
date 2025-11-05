@@ -1,5 +1,26 @@
 import { Request } from 'express';
-import { User, Tenant } from '@prisma/client';
+
+// Define User and Tenant types (will be available after Prisma generate)
+export interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  password: string;
+  role: string;
+  tenantId: string;
+  aiOptOut: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  settings: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Extend Express Request to include authenticated user and tenant
 export interface AuthRequest extends Request {
