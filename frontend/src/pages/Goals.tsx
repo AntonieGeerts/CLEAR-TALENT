@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Target, Sparkles, Plus } from 'lucide-react';
 
 export const Goals: React.FC = () => {
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -12,10 +11,7 @@ export const Goals: React.FC = () => {
           <p className="text-gray-600 mt-1">Manage and generate employee goals</p>
         </div>
         <div className="flex space-x-3">
-          <button
-            onClick={() => setShowGenerateModal(true)}
-            className="btn btn-primary flex items-center space-x-2"
-          >
+          <button className="btn btn-primary flex items-center space-x-2">
             <Sparkles size={20} />
             <span>AI Generate Goals</span>
           </button>
@@ -32,10 +28,7 @@ export const Goals: React.FC = () => {
         <p className="text-gray-600 mb-6">
           Use AI to generate personalized SMART goals and OKRs for employees based on their role.
         </p>
-        <button
-          onClick={() => setShowGenerateModal(true)}
-          className="btn btn-primary inline-flex items-center space-x-2"
-        >
+        <button className="btn btn-primary inline-flex items-center space-x-2">
           <Sparkles size={20} />
           <span>Generate Goals with AI</span>
         </button>

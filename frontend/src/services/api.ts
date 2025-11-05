@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://clear-talent-production.up.railway.app/api/v1';
+// @ts-ignore - Vite env vars
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://clear-talent-production.up.railway.app/api/v1';
 
 class ApiService {
   private api: AxiosInstance;
