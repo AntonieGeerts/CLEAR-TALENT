@@ -60,7 +60,7 @@ export class SetupController {
    */
   static async initializeDatabase(req: Request, res: Response) {
     try {
-      const results = [];
+      const results: any[] = [];
 
       // Run migrations
       try {
