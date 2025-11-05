@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8080/api/v1/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"
 
 # Start script with better error handling
-CMD ["sh", "-c", "echo 'Generating Prisma client...' && npx prisma generate && echo 'Running migrations...' && npx prisma migrate deploy && echo 'Starting application...' && node dist/index.js"]
+CMD ["sh", "-c", "echo 'Generating Prisma client...' && npx prisma generate && echo 'Running migrations...' && npx prisma migrate deploy && echo 'Seeding database...' && npx prisma db seed || echo 'Seed failed or already seeded' && echo 'Starting application...' && node dist/index.js"]
