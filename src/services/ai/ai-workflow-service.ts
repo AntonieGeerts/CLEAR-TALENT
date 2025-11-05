@@ -124,7 +124,7 @@ Return as a JSON array.`;
       });
 
       // Get target role profile if provided
-      let targetCompetencies = [];
+      let targetCompetencies: any[] = [];
       if (roleProfileId) {
         const roleProfile = await RoleTemplateService.getRoleProfileById(roleProfileId, tenantId);
         targetCompetencies = roleProfile.roleCompetencies;

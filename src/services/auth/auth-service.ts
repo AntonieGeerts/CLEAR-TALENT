@@ -160,8 +160,8 @@ export class AuthService {
    */
   static generateToken(payload: TokenPayload): string {
     return jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn as string,
-    });
+      expiresIn: config.jwt.expiresIn,
+    } as any);
   }
 
   /**
@@ -169,8 +169,8 @@ export class AuthService {
    */
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.refreshExpiresIn as string,
-    });
+      expiresIn: config.jwt.refreshExpiresIn,
+    } as any);
   }
 
   /**
