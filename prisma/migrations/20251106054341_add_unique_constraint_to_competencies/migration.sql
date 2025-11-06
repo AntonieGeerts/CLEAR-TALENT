@@ -1,63 +1,68 @@
--- Deduplicate competencies before adding unique constraint
--- This migration removes duplicate competencies, keeping only the oldest one
+-- Deduplicate competencies and add unique constraint
+-- This migration keeps the oldest competency for each (name, tenant_id) pair
 
--- Step 1: Create a temporary table with competencies to keep (oldest ones)
-CREATE TEMP TABLE competencies_to_keep AS
-SELECT DISTINCT ON (name, tenant_id) id
-FROM competencies
-ORDER BY name, tenant_id, created_at ASC;
+DO $$
+DECLARE
+  dup RECORD;
+  keep_id UUID;
+  del_id UUID;
+BEGIN
+  -- Process each set of duplicates
+  FOR dup IN
+    SELECT name, tenant_id
+    FROM competencies
+    GROUP BY name, tenant_id
+    HAVING COUNT(*) > 1
+  LOOP
+    -- Get the oldest competency to keep
+    SELECT id INTO keep_id
+    FROM competencies
+    WHERE name = dup.name AND tenant_id = dup.tenant_id
+    ORDER BY created_at ASC
+    LIMIT 1;
 
--- Step 2: Update related tables to point to the kept competencies
--- Update role_competencies
-UPDATE role_competencies rc
-SET competency_id = (
-  SELECT ctk.id
-  FROM competencies_to_keep ctk
-  JOIN competencies c ON c.id = ctk.id
-  JOIN competencies c_old ON c_old.id = rc.competency_id
-  WHERE c.name = c_old.name AND c.tenant_id = c_old.tenant_id
-  LIMIT 1
-)
-WHERE rc.competency_id NOT IN (SELECT id FROM competencies_to_keep);
+    -- Update and delete each duplicate
+    FOR del_id IN
+      SELECT id
+      FROM competencies
+      WHERE name = dup.name
+        AND tenant_id = dup.tenant_id
+        AND id != keep_id
+    LOOP
+      -- Safely handle foreign key references
+      BEGIN
+        -- Update role_competencies to point to the kept competency
+        UPDATE role_competencies
+        SET competency_id = keep_id
+        WHERE competency_id = del_id;
 
--- Update skill_profiles
-UPDATE skill_profiles sp
-SET competency_id = (
-  SELECT ctk.id
-  FROM competencies_to_keep ctk
-  JOIN competencies c ON c.id = ctk.id
-  JOIN competencies c_old ON c_old.id = sp.competency_id
-  WHERE c.name = c_old.name AND c.tenant_id = c_old.tenant_id
-  LIMIT 1
-)
-WHERE sp.competency_id NOT IN (SELECT id FROM competencies_to_keep);
+        -- Update skill_profiles
+        UPDATE skill_profiles
+        SET competency_id = keep_id
+        WHERE competency_id = del_id;
 
--- Update embedding_vectors
-UPDATE embedding_vectors ev
-SET entity_id = (
-  SELECT ctk.id
-  FROM competencies_to_keep ctk
-  JOIN competencies c ON c.id = ctk.id
-  JOIN competencies c_old ON c_old.id = ev.entity_id::uuid
-  WHERE c.name = c_old.name AND c.tenant_id = c_old.tenant_id
-  AND ev.entity_type = 'COMPETENCY'
-  LIMIT 1
-)
-WHERE ev.entity_type = 'COMPETENCY'
-AND ev.entity_id::uuid NOT IN (SELECT id FROM competencies_to_keep);
+        -- Update embedding_vectors
+        UPDATE embedding_vectors
+        SET entity_id = keep_id::text
+        WHERE entity_type = 'COMPETENCY' AND entity_id = del_id::text;
 
--- Step 3: Delete proficiency levels for duplicate competencies
-DELETE FROM proficiency_levels
-WHERE competency_id NOT IN (SELECT id FROM competencies_to_keep);
+      EXCEPTION WHEN OTHERS THEN
+        -- Log error but continue (tables might not exist in all environments)
+        RAISE NOTICE 'Could not update references for %: %', del_id, SQLERRM;
+      END;
 
--- Step 4: Delete behavioral indicators for duplicate competencies
-DELETE FROM behavioral_indicators
-WHERE competency_id NOT IN (SELECT id FROM competencies_to_keep);
+      -- Delete child records (cascade should handle this, but being explicit)
+      DELETE FROM proficiency_levels WHERE competency_id = del_id;
+      DELETE FROM behavioral_indicators WHERE competency_id = del_id;
 
--- Step 5: Delete duplicate competencies
-DELETE FROM competencies
-WHERE id NOT IN (SELECT id FROM competencies_to_keep);
+      -- Delete the duplicate competency
+      DELETE FROM competencies WHERE id = del_id;
 
--- Step 6: Add unique constraint
+      RAISE NOTICE 'Removed duplicate competency % (kept %)', del_id, keep_id;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- Add unique constraint to prevent future duplicates
 CREATE UNIQUE INDEX IF NOT EXISTS unique_competency_per_tenant
 ON competencies(name, tenant_id);
