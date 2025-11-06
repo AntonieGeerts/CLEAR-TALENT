@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../types';
 import { ValidationError, AuthorizationError } from '../types';
+import { AIOrganizationalGoalService } from '../services/organizational-goals/ai-organizational-goal-service';
 
 const prisma = new PrismaClient();
 
@@ -432,6 +433,81 @@ export class OrganizationalGoalsController {
           return acc;
         }, {} as Record<string, number>),
       },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Generate strategic goals with AI (Balanced Scorecard + KPIs)
+   */
+  static async generateStrategicGoals(req: AuthRequest, res: Response) {
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    // Only ADMIN can generate strategic goals
+    const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD'];
+    if (!allowedRoles.includes(req.user!.role)) {
+      throw new AuthorizationError('Insufficient permissions to generate strategic goals');
+    }
+
+    const { organizationName, industry, organizationDescription } = req.body;
+
+    if (!organizationName || !industry || !organizationDescription) {
+      throw new ValidationError('Organization name, industry, and description are required');
+    }
+
+    // Generate goals using AI
+    const generatedGoals = await AIOrganizationalGoalService.generateStrategicGoals(
+      tenantId,
+      userId,
+      {
+        organizationName,
+        industry,
+        organizationDescription,
+      }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        goals: generatedGoals,
+        count: generatedGoals.length,
+      },
+      message: 'Strategic goals generated successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Create organizational goals from AI-generated suggestions
+   */
+  static async createGoalsFromAI(req: AuthRequest, res: Response) {
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    // Only ADMIN can create strategic goals
+    const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD'];
+    if (!allowedRoles.includes(req.user!.role)) {
+      throw new AuthorizationError('Insufficient permissions to create strategic goals');
+    }
+
+    const { goals } = req.body;
+
+    if (!goals || !Array.isArray(goals) || goals.length === 0) {
+      throw new ValidationError('Goals array is required');
+    }
+
+    // Create goals in database
+    const createdGoals = await AIOrganizationalGoalService.createGoalsFromAI(
+      tenantId,
+      userId,
+      goals
+    );
+
+    res.status(201).json({
+      success: true,
+      data: createdGoals,
+      message: `${createdGoals.length} strategic goals created successfully`,
       timestamp: new Date().toISOString(),
     });
   }

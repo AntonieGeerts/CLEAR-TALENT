@@ -15,14 +15,14 @@ export const branding = {
 
   // Logo Configuration
   logo: {
-    // Actual logo URLs
+    // Actual logo URLs (update these with accessible URLs from your hosting)
     main: 'https://www.clear-talent.com/clear-logo.png',
     light: 'https://www.clear-talent.com/clear-logo.png',
     icon: 'https://www.clear-talent.com/clear-logo.png',
     alt: 'CLEAR TALENT Logo',
 
-    // Fallback to text if logo not available
-    useFallback: false, // Using actual logo now
+    // Fallback to text if logo not available (set to false once logo is properly hosted)
+    useFallback: true, // Temporarily using fallback until logo URL is accessible
   },
 
   // Color Scheme (update with brand colors)

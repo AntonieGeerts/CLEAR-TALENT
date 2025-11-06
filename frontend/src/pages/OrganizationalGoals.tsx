@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, ChevronRight, ChevronDown, Edit2 } from 'lucide-react';
+import { Target, Plus, ChevronRight, ChevronDown, Edit2, Sparkles, Loader } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface OrganizationalGoal {
@@ -26,6 +26,7 @@ export const OrganizationalGoals: React.FC = () => {
   const [goals, setGoals] = useState<OrganizationalGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [selectedParent, setSelectedParent] = useState<OrganizationalGoal | null>(null);
 
   useEffect(() => {
@@ -88,13 +89,22 @@ export const OrganizationalGoals: React.FC = () => {
           <div className="text-center py-12">
             <Target className="mx-auto text-gray-400 mb-4" size={48} />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No goals yet</h3>
-            <p className="text-gray-600 mb-4">Start by creating your first organizational goal</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn btn-primary"
-            >
-              Create First Goal
-            </button>
+            <p className="text-gray-600 mb-4">Start by creating your first organizational goal manually or use AI to generate strategic goals with Balanced Scorecard</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setShowAIModal(true)}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                <Sparkles size={20} />
+                Generate with AI
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn btn-secondary"
+              >
+                Create Manually
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -124,6 +134,17 @@ export const OrganizationalGoals: React.FC = () => {
           onSuccess={() => {
             setShowCreateModal(false);
             setSelectedParent(null);
+            loadGoals();
+          }}
+        />
+      )}
+
+      {/* AI Generation Modal */}
+      {showAIModal && (
+        <AIGenerationModal
+          onClose={() => setShowAIModal(false)}
+          onSuccess={() => {
+            setShowAIModal(false);
             loadGoals();
           }}
         />
@@ -387,6 +408,264 @@ const GoalModal: React.FC<GoalModalProps> = ({ parentGoal, onClose, onSuccess })
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// AI Generation Modal Component
+interface AIGenerationModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSuccess }) => {
+  const [organizationName, setOrganizationName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [organizationDescription, setOrganizationDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [generatedGoals, setGeneratedGoals] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState<'input' | 'review'>('input');
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await apiService.generateStrategicGoalsAI({
+        organizationName,
+        industry,
+        organizationDescription,
+      });
+
+      setGeneratedGoals(result.goals || []);
+      setStep('review');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate goals. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateGoals = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      await apiService.createGoalsFromAI({ goals: generatedGoals });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to create goals. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary-100 p-2 rounded-lg">
+                <Sparkles className="text-primary-600" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {step === 'input' ? 'Generate Strategic Goals with AI' : 'Review Generated Goals'}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {step === 'input' 
+                    ? 'Create strategic goals with Balanced Scorecard and KPIs' 
+                    : `${generatedGoals.length} goals generated with KPIs`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {step === 'input' ? (
+            /* Input Step */
+            <form onSubmit={handleGenerate} className="space-y-4">
+              <div>
+                <label className="label">Organization Name *</label>
+                <input
+                  type="text"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  className="input"
+                  placeholder="e.g., Harbour City Restaurants"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="label">Industry *</label>
+                <input
+                  type="text"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="input"
+                  placeholder="e.g., Restaurant & Hospitality"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="label">Organization Description *</label>
+                <textarea
+                  value={organizationDescription}
+                  onChange={(e) => setOrganizationDescription(e.target.value)}
+                  className="input"
+                  rows={6}
+                  placeholder="Describe your organization, its mission, key challenges, and strategic priorities. For example: 'Harbour City is a group of restaurants focusing on authentic Asian cuisine. We operate 5 locations across the city and aim to expand while maintaining quality and customer satisfaction...'"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Provide detailed context for better AI-generated goals
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">What will be generated:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• 3-5 Strategic Goals across Balanced Scorecard perspectives</li>
+                  <li>• Financial, Customer, Internal Process, and Learning & Growth goals</li>
+                  <li>• KPIs for each goal with targets and measurement frequency</li>
+                  <li>• Target dates and importance weights</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary flex items-center gap-2"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader className="animate-spin" size={16} />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      Generate Goals
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Review Step */
+            <div className="space-y-4">
+              <div className="grid gap-4">
+                {generatedGoals.map((goal, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-gray-900">{goal.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
+                      </div>
+                      <span className="ml-4 px-3 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
+                        {goal.bscPerspective?.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 text-sm mb-3">
+                      {goal.department && (
+                        <div>
+                          <span className="text-gray-500">Department:</span>
+                          <span className="ml-1 font-medium">{goal.department}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500">Weight:</span>
+                        <span className="ml-1 font-medium">{goal.weight}%</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Target Date:</span>
+                        <span className="ml-1 font-medium">
+                          {new Date(goal.targetDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* KPIs */}
+                    {goal.kpis && goal.kpis.length > 0 && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Key Performance Indicators:</h4>
+                        <div className="space-y-2">
+                          {goal.kpis.map((kpi: any, kpiIndex: number) => (
+                            <div key={kpiIndex} className="flex items-start text-sm">
+                              <span className="text-primary-600 mr-2">•</span>
+                              <div className="flex-1">
+                                <span className="font-medium">{kpi.name}:</span>
+                                <span className="ml-1 text-gray-600">{kpi.description}</span>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Target: <span className="font-medium">{kpi.target}{kpi.unit}</span> | 
+                                  Measured: <span className="font-medium">{kpi.frequency}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('input');
+                    setGeneratedGoals([]);
+                  }}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  Back to Edit
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="btn btn-secondary"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateGoals}
+                    className="btn btn-primary"
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating...' : `Create ${generatedGoals.length} Goals`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

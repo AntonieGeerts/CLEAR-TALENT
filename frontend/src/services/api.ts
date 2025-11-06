@@ -394,6 +394,22 @@ class ApiService {
     return response.data;
   }
 
+  async generateStrategicGoalsAI(data: {
+    organizationName: string;
+    industry: string;
+    organizationDescription: string;
+  }) {
+    const response = await this.api.post('/organizational-goals/generate-ai', data);
+    return response.data.data;
+  }
+
+  async createGoalsFromAI(data: {
+    goals: any[];
+  }) {
+    const response = await this.api.post('/organizational-goals/create-from-ai', data);
+    return response.data.data;
+  }
+
   // ============================================================================
   // PERFORMANCE IMPROVEMENT PLANS (PIPs)
   // ============================================================================

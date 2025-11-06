@@ -9,6 +9,8 @@ router.get('/tree', asyncHandler(OrganizationalGoalsController.getGoalTree));
 router.get('/alignment-report', asyncHandler(OrganizationalGoalsController.getAlignmentReport));
 router.get('/:id', asyncHandler(OrganizationalGoalsController.getGoal));
 router.post('/', asyncHandler(OrganizationalGoalsController.createGoal));
+router.post('/generate-ai', asyncHandler(OrganizationalGoalsController.generateStrategicGoals));
+router.post('/create-from-ai', asyncHandler(OrganizationalGoalsController.createGoalsFromAI));
 router.put('/:id', asyncHandler(OrganizationalGoalsController.updateGoal));
 router.delete('/:id', asyncHandler(OrganizationalGoalsController.deleteGoal));
 
