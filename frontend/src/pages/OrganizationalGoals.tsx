@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, ChevronRight, ChevronDown, Edit2, Sparkles, Loader } from 'lucide-react';
+import { Target, Plus, ChevronRight, ChevronDown, Edit2, Sparkles, Loader, Zap } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface OrganizationalGoal {
@@ -26,8 +26,11 @@ export const OrganizationalGoals: React.FC = () => {
   const [goals, setGoals] = useState<OrganizationalGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showKPIModal, setShowKPIModal] = useState(false);
   const [selectedParent, setSelectedParent] = useState<OrganizationalGoal | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<OrganizationalGoal | null>(null);
 
   useEffect(() => {
     loadGoals();
@@ -116,6 +119,14 @@ export const OrganizationalGoals: React.FC = () => {
                   setSelectedParent(parent);
                   setShowCreateModal(true);
                 }}
+                onEdit={(goal) => {
+                  setSelectedGoal(goal);
+                  setShowEditModal(true);
+                }}
+                onGenerateKPIs={(goal) => {
+                  setSelectedGoal(goal);
+                  setShowKPIModal(true);
+                }}
                 onRefresh={loadGoals}
               />
             ))}
@@ -123,7 +134,7 @@ export const OrganizationalGoals: React.FC = () => {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Create Modal */}
       {showCreateModal && (
         <GoalModal
           parentGoal={selectedParent}
@@ -139,12 +150,44 @@ export const OrganizationalGoals: React.FC = () => {
         />
       )}
 
+      {/* Edit Modal */}
+      {showEditModal && selectedGoal && (
+        <EditGoalModal
+          goal={selectedGoal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedGoal(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setSelectedGoal(null);
+            loadGoals();
+          }}
+        />
+      )}
+
       {/* AI Generation Modal */}
       {showAIModal && (
         <AIGenerationModal
           onClose={() => setShowAIModal(false)}
           onSuccess={() => {
             setShowAIModal(false);
+            loadGoals();
+          }}
+        />
+      )}
+
+      {/* KPI Generation Modal */}
+      {showKPIModal && selectedGoal && (
+        <KPIGenerationModal
+          goal={selectedGoal}
+          onClose={() => {
+            setShowKPIModal(false);
+            setSelectedGoal(null);
+          }}
+          onSuccess={() => {
+            setShowKPIModal(false);
+            setSelectedGoal(null);
             loadGoals();
           }}
         />
@@ -157,10 +200,12 @@ interface GoalTreeNodeProps {
   goal: OrganizationalGoal;
   level?: number;
   onAddChild: (goal: OrganizationalGoal) => void;
+  onEdit: (goal: OrganizationalGoal) => void;
+  onGenerateKPIs: (goal: OrganizationalGoal) => void;
   onRefresh: () => void;
 }
 
-const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild, onRefresh }) => {
+const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild, onEdit, onGenerateKPIs, onRefresh }) => {
   const [expanded, setExpanded] = useState(true);
 
   const levelColors = {
@@ -214,6 +259,13 @@ const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => onGenerateKPIs(goal)}
+              className="p-2 hover:bg-white hover:bg-opacity-50 rounded"
+              title="Generate KPIs with AI"
+            >
+              <Zap size={18} />
+            </button>
+            <button
               onClick={() => onAddChild(goal)}
               className="p-2 hover:bg-white hover:bg-opacity-50 rounded"
               title="Add child goal"
@@ -221,6 +273,7 @@ const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild
               <Plus size={18} />
             </button>
             <button
+              onClick={() => onEdit(goal)}
               className="p-2 hover:bg-white hover:bg-opacity-50 rounded"
               title="Edit goal"
             >
@@ -239,6 +292,8 @@ const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild
               goal={child}
               level={level + 1}
               onAddChild={onAddChild}
+              onEdit={onEdit}
+              onGenerateKPIs={onGenerateKPIs}
               onRefresh={onRefresh}
             />
           ))}
@@ -405,6 +460,153 @@ const GoalModal: React.FC<GoalModalProps> = ({ parentGoal, onClose, onSuccess })
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create Goal'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Edit Goal Modal Component
+interface EditGoalModalProps {
+  goal: OrganizationalGoal;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const EditGoalModal: React.FC<EditGoalModalProps> = ({ goal, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    title: goal.title || '',
+    description: goal.description || '',
+    department: goal.department || '',
+    weight: goal.weight || 100,
+    targetDate: goal.targetDate ? new Date(goal.targetDate).toISOString().split('T')[0] : '',
+    status: goal.status || 'DRAFT',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await apiService.updateOrganizationalGoal(goal.id, {
+        ...formData,
+        weight: formData.weight || undefined,
+        targetDate: formData.targetDate || undefined,
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update goal');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-2xl font-bold mb-4">Edit Goal</h2>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Goal Title *</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="input"
+              placeholder="e.g., Increase revenue by 25%"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="input"
+              rows={3}
+              placeholder="Describe the goal and success criteria..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Department</label>
+              <input
+                type="text"
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="input"
+                placeholder="e.g., Engineering"
+              />
+            </div>
+
+            <div>
+              <label className="label">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="input"
+              >
+                <option value="DRAFT">Draft</option>
+                <option value="ACTIVE">Active</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Weight (%)</label>
+              <input
+                type="number"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) || 0 })}
+                className="input"
+                min="0"
+                max="100"
+              />
+            </div>
+
+            <div>
+              <label className="label">Target Date</label>
+              <input
+                type="date"
+                value={formData.targetDate}
+                onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
+                className="input"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-secondary"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
@@ -723,6 +925,183 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
                     disabled={loading || selectedCount === 0}
                   >
                     {loading ? 'Creating...' : `Create ${selectedCount} Goal${selectedCount !== 1 ? 's' : ''}`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// KPI Generation Modal Component
+interface KPIGenerationModalProps {
+  goal: OrganizationalGoal;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const KPIGenerationModal: React.FC<KPIGenerationModalProps> = ({ goal, onClose, onSuccess }) => {
+  const [loading, setLoading] = useState(false);
+  const [generatedKPIs, setGeneratedKPIs] = useState<any[]>([]);
+  const [selectedKPIs, setSelectedKPIs] = useState<boolean[]>([]);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState<'generate' | 'review'>('generate');
+  const [additionalContext, setAdditionalContext] = useState('');
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await apiService.generateKPIsForGoal({
+        goalId: goal.id,
+        goalTitle: goal.title,
+        goalDescription: goal.description || '',
+        additionalContext,
+      });
+
+      const kpis = result.kpis || [];
+      setGeneratedKPIs(kpis);
+      setSelectedKPIs(new Array(kpis.length).fill(true));
+      setStep('review');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate KPIs. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveKPIs = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const kpisToSave = generatedKPIs.filter((_, index) => selectedKPIs[index]);
+
+      if (kpisToSave.length === 0) {
+        setError('Please select at least one KPI to save.');
+        setLoading(false);
+        return;
+      }
+
+      await apiService.updateGoalKPIs(goal.id, { kpis: kpisToSave });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to save KPIs. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleKPISelection = (index: number) => {
+    const newSelected = [...selectedKPIs];
+    newSelected[index] = !newSelected[index];
+    setSelectedKPIs(newSelected);
+  };
+
+  const toggleAllKPIs = () => {
+    const allSelected = selectedKPIs.every(selected => selected);
+    setSelectedKPIs(new Array(generatedKPIs.length).fill(!allSelected));
+  };
+
+  const selectedCount = selectedKPIs.filter(selected => selected).length;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-yellow-100 p-2 rounded-lg">
+                <Zap className="text-yellow-600" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {step === 'generate' ? 'Generate KPIs with AI' : 'Review Generated KPIs'}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {step === 'generate' ? `For goal: ${goal.title}` : `${generatedKPIs.length} KPIs generated`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {step === 'generate' ? (
+            <form onSubmit={handleGenerate} className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-blue-900 mb-2">Goal Details:</h3>
+                <p className="text-sm text-blue-800"><strong>Title:</strong> {goal.title}</p>
+                {goal.description && <p className="text-sm text-blue-800 mt-1"><strong>Description:</strong> {goal.description}</p>}
+                {goal.department && <p className="text-sm text-blue-800 mt-1"><strong>Department:</strong> {goal.department}</p>}
+              </div>
+
+              <div>
+                <label className="label">Additional Context (Optional)</label>
+                <textarea value={additionalContext} onChange={(e) => setAdditionalContext(e.target.value)} className="input" rows={4} placeholder="Provide any additional context that will help generate relevant KPIs. For example: current performance metrics, industry benchmarks, specific constraints, etc." />
+                <p className="text-xs text-gray-500 mt-1">More context leads to better KPI suggestions</p>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-semibold text-yellow-900 mb-2">What will be generated:</h4>
+                <ul className="text-sm text-yellow-800 space-y-1">
+                  <li>• 3-6 Key Performance Indicators specific to this goal</li>
+                  <li>• Target values and units of measurement</li>
+                  <li>• Measurement frequency (monthly, quarterly, annually)</li>
+                  <li>• Clear descriptions of what each KPI measures</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={onClose} className="btn btn-secondary" disabled={loading}>Cancel</button>
+                <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={loading}>
+                  {loading ? <><Loader className="animate-spin" size={16} />Generating...</> : <><Zap size={16} />Generate KPIs</>}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={selectedCount === generatedKPIs.length} onChange={toggleAllKPIs} className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500" />
+                  <span className="text-sm font-medium text-gray-700">{selectedCount === generatedKPIs.length ? 'Deselect All' : 'Select All'}</span>
+                </label>
+                <span className="text-sm text-gray-600">{selectedCount} of {generatedKPIs.length} KPI{generatedKPIs.length !== 1 ? 's' : ''} selected</span>
+              </div>
+
+              <div className="space-y-3">
+                {generatedKPIs.map((kpi, index) => (
+                  <div key={index} className={`border rounded-lg p-4 transition-all ${selectedKPIs[index] ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white opacity-60'}`}>
+                    <div className="flex items-start gap-3">
+                      <input type="checkbox" checked={selectedKPIs[index]} onChange={() => toggleKPISelection(index)} className="w-5 h-5 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500 mt-1 cursor-pointer" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{kpi.name}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{kpi.description}</p>
+                        <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                          <span><strong>Target:</strong> {kpi.target}{kpi.unit}</span>
+                          <span><strong>Measured:</strong> {kpi.frequency}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between gap-3 pt-4 border-t">
+                <button type="button" onClick={() => { setStep('generate'); setGeneratedKPIs([]); }} className="btn btn-secondary" disabled={loading}>Back to Edit</button>
+                <div className="flex gap-3">
+                  <button type="button" onClick={onClose} className="btn btn-secondary" disabled={loading}>Cancel</button>
+                  <button type="button" onClick={handleSaveKPIs} className="btn btn-primary" disabled={loading || selectedCount === 0}>
+                    {loading ? 'Saving...' : `Save ${selectedCount} KPI${selectedCount !== 1 ? 's' : ''}`}
                   </button>
                 </div>
               </div>

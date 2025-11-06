@@ -410,6 +410,23 @@ class ApiService {
     return response.data.data;
   }
 
+  async generateKPIsForGoal(data: {
+    goalId: string;
+    goalTitle: string;
+    goalDescription: string;
+    additionalContext?: string;
+  }) {
+    const response = await this.api.post('/organizational-goals/generate-kpis', data);
+    return response.data.data;
+  }
+
+  async updateGoalKPIs(goalId: string, data: {
+    kpis: any[];
+  }) {
+    const response = await this.api.put(`/organizational-goals/${goalId}/kpis`, data);
+    return response.data.data;
+  }
+
   // ============================================================================
   // PERFORMANCE IMPROVEMENT PLANS (PIPs)
   // ============================================================================

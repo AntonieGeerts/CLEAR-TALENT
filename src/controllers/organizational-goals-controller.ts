@@ -524,4 +524,89 @@ export class OrganizationalGoalsController {
       timestamp: new Date().toISOString(),
     });
   }
+
+  /**
+   * Generate KPIs for a specific goal using AI
+   */
+  static async generateKPIsForGoal(req: AuthRequest, res: Response) {
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    const { goalId, goalTitle, goalDescription, additionalContext } = req.body;
+
+    if (!goalId || !goalTitle) {
+      throw new ValidationError('Goal ID and title are required');
+    }
+
+    try {
+      // Generate KPIs using AI
+      const kpis = await AIOrganizationalGoalService.generateKPIsForGoal(
+        tenantId,
+        userId,
+        {
+          goalId,
+          goalTitle,
+          goalDescription: goalDescription || '',
+          additionalContext: additionalContext || '',
+        }
+      );
+
+      res.status(200).json({
+        success: true,
+        data: { kpis },
+        message: 'KPIs generated successfully',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error generating KPIs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update goal with AI-generated KPIs
+   */
+  static async updateGoalKPIs(req: AuthRequest, res: Response) {
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const { kpis } = req.body;
+
+    if (!kpis || !Array.isArray(kpis)) {
+      throw new ValidationError('KPIs array is required');
+    }
+
+    // Verify goal exists and belongs to tenant
+    const existingGoal = await prisma.organizationalGoal.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existingGoal) {
+      throw new NotFoundError('Goal not found');
+    }
+
+    // Get existing metadata or create new
+    const existingMetadata = (existingGoal.metadata as any) || {};
+
+    // Update goal with KPIs in metadata
+    const updatedGoal = await prisma.organizationalGoal.update({
+      where: { id },
+      data: {
+        metadata: {
+          ...existingMetadata,
+          kpis,
+          kpisGeneratedAt: new Date().toISOString(),
+          kpisGeneratedBy: userId,
+        } as any,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updatedGoal,
+      message: 'Goal KPIs updated successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
 }

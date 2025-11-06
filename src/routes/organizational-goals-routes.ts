@@ -11,7 +11,9 @@ router.get('/:id', asyncHandler(OrganizationalGoalsController.getGoal));
 router.post('/', asyncHandler(OrganizationalGoalsController.createGoal));
 router.post('/generate-ai', asyncHandler(OrganizationalGoalsController.generateStrategicGoals));
 router.post('/create-from-ai', asyncHandler(OrganizationalGoalsController.createGoalsFromAI));
+router.post('/generate-kpis', asyncHandler(OrganizationalGoalsController.generateKPIsForGoal));
 router.put('/:id', asyncHandler(OrganizationalGoalsController.updateGoal));
+router.put('/:id/kpis', asyncHandler(OrganizationalGoalsController.updateGoalKPIs));
 router.delete('/:id', asyncHandler(OrganizationalGoalsController.deleteGoal));
 
 export default router;

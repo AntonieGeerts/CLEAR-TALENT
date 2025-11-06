@@ -145,6 +145,96 @@ export class AIOrganizationalGoalService {
       throw error;
     }
   }
+
+  /**
+   * Generate KPIs for a specific goal using AI
+   */
+  static async generateKPIsForGoal(
+    tenantId: string,
+    userId: string,
+    input: {
+      goalId: string;
+      goalTitle: string;
+      goalDescription: string;
+      additionalContext?: string;
+    }
+  ): Promise<KPI[]> {
+    try {
+      aiLogger.info('Generating KPIs for specific goal', {
+        goalId: input.goalId,
+        goalTitle: input.goalTitle,
+      });
+
+      // Create prompt for KPI generation
+      const prompt = `Generate 3-6 Key Performance Indicators (KPIs) for the following goal:
+
+Goal Title: ${input.goalTitle}
+Goal Description: ${input.goalDescription}
+${input.additionalContext ? `Additional Context: ${input.additionalContext}` : ''}
+
+Generate specific, measurable KPIs that will help track progress toward this goal. For each KPI, provide:
+- name: Clear, concise KPI name
+- description: What this KPI measures and why it matters
+- target: Target value (numeric)
+- unit: Unit of measurement (%, $, #, points, etc.)
+- frequency: How often to measure (MONTHLY, QUARTERLY, ANNUALLY)
+
+Return ONLY a valid JSON array of KPIs with no additional text or explanation. Use this exact structure:
+
+[
+  {
+    "name": "Revenue Growth Rate",
+    "description": "Measures the year-over-year increase in revenue",
+    "target": "20",
+    "unit": "%",
+    "frequency": "QUARTERLY"
+  }
+]`;
+
+      // Generate KPIs using AI
+      const response = await this.orchestrator.generateCompletion(
+        prompt,
+        {
+          tenantId,
+          userId,
+          module: 'goal',
+          action: 'generate-kpis',
+        },
+        {
+          temperature: 0.7,
+          maxTokens: 1500,
+        }
+      );
+
+      // Parse JSON response
+      const kpis = this.orchestrator.parseJSONResponse<KPI[]>(response);
+
+      // Validate structure
+      if (!Array.isArray(kpis) || kpis.length === 0) {
+        throw new Error('Invalid response format: expected array of KPIs');
+      }
+
+      // Validate each KPI has required fields
+      kpis.forEach((kpi, index) => {
+        if (!kpi.name || !kpi.description || !kpi.target || !kpi.unit || !kpi.frequency) {
+          throw new Error(`KPI at index ${index} missing required fields`);
+        }
+      });
+
+      aiLogger.info('KPIs generated successfully', {
+        count: kpis.length,
+        goalId: input.goalId,
+      });
+
+      return kpis;
+    } catch (error) {
+      aiLogger.error('Failed to generate KPIs', {
+        goalId: input.goalId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new AIServiceError('Failed to generate KPIs for goal');
+    }
+  }
 }
 
 export default AIOrganizationalGoalService;
