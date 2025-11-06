@@ -111,9 +111,25 @@ class ApiService {
   async createRoleProfile(data: {
     title: string;
     department: string;
+    seniority?: string;
     description?: string;
   }) {
     const response = await this.api.post('/role-profiles', data);
+    return response.data;
+  }
+
+  async updateRoleProfile(id: string, data: {
+    title?: string;
+    department?: string;
+    seniority?: string;
+    description?: string;
+  }) {
+    const response = await this.api.put(`/role-profiles/${id}`, data);
+    return response.data;
+  }
+
+  async deleteRoleProfile(id: string) {
+    const response = await this.api.delete(`/role-profiles/${id}`);
     return response.data;
   }
 

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
 import {
   BookOpen,
   Briefcase,
@@ -49,8 +50,49 @@ const quickActions = [
   },
 ];
 
+interface DashboardStats {
+  competencies: number;
+  roleProfiles: number;
+  goals: number;
+  idps: number;
+}
+
 export const Dashboard: React.FC = () => {
   const { user, tenant } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    competencies: 0,
+    roleProfiles: 0,
+    goals: 0,
+    idps: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const [competenciesRes, roleProfilesRes, goalsRes, idpsRes] = await Promise.all([
+        apiService.getCompetencies().catch(() => ({ data: [] })),
+        apiService.getRoleProfiles().catch(() => ({ data: [] })),
+        apiService.getGoals().catch(() => ({ data: [] })),
+        apiService.getIDPs().catch(() => ({ data: [] })),
+      ]);
+
+      setStats({
+        competencies: competenciesRes.data?.length || 0,
+        roleProfiles: roleProfilesRes.data?.length || 0,
+        goals: goalsRes.data?.length || 0,
+        idps: idpsRes.data?.length || 0,
+      });
+    } catch (error) {
+      console.error('Failed to load dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -59,7 +101,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome back, {user?.name || 'User'}!
+              Welcome back, {user?.firstName || user?.name || 'User'}!
             </h1>
             <p className="text-gray-600 mt-2">
               {tenant?.name} - Performance Management Dashboard
@@ -78,7 +120,9 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Competencies</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">-</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {loading ? '...' : stats.competencies}
+              </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <BookOpen className="text-blue-600" size={24} />
@@ -90,7 +134,9 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Role Profiles</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">-</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {loading ? '...' : stats.roleProfiles}
+              </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
               <Briefcase className="text-purple-600" size={24} />
@@ -102,7 +148,9 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Active Goals</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">-</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {loading ? '...' : stats.goals}
+              </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <Target className="text-green-600" size={24} />
@@ -114,7 +162,9 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Active IDPs</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">-</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {loading ? '...' : stats.idps}
+              </p>
             </div>
             <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
               <GraduationCap className="text-pink-600" size={24} />

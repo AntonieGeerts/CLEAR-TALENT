@@ -7,7 +7,9 @@ export const Competencies: React.FC = () => {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [selectedCompetency, setSelectedCompetency] = useState<Competency | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -23,6 +25,22 @@ export const Competencies: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to load competencies');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEdit = (competency: Competency) => {
+    setSelectedCompetency(competency);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this competency?')) return;
+
+    try {
+      await apiService.deleteCompetency(id);
+      loadCompetencies();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete competency');
     }
   };
 
@@ -115,11 +133,17 @@ export const Competencies: React.FC = () => {
                 <p className="text-xs text-gray-500 mb-4">Category: {competency.category}</p>
               )}
               <div className="flex space-x-2">
-                <button className="flex-1 btn btn-secondary text-sm py-2">
+                <button
+                  onClick={() => handleEdit(competency)}
+                  className="flex-1 btn btn-secondary text-sm py-2"
+                >
                   <Edit size={16} className="inline mr-1" />
                   Edit
                 </button>
-                <button className="btn btn-danger text-sm py-2">
+                <button
+                  onClick={() => handleDelete(competency.id)}
+                  className="btn btn-danger text-sm py-2"
+                >
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -134,6 +158,22 @@ export const Competencies: React.FC = () => {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false);
+            loadCompetencies();
+          }}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedCompetency && (
+        <EditCompetencyModal
+          competency={selectedCompetency}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedCompetency(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setSelectedCompetency(null);
             loadCompetencies();
           }}
         />
@@ -246,6 +286,108 @@ const CreateCompetencyModal: React.FC<{ onClose: () => void; onSuccess: () => vo
             </button>
             <button type="submit" disabled={isSubmitting} className="btn btn-primary">
               {isSubmitting ? 'Creating...' : 'Create Competency'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Edit Competency Modal Component
+const EditCompetencyModal: React.FC<{
+  competency: Competency;
+  onClose: () => void;
+  onSuccess: () => void;
+}> = ({ competency, onClose, onSuccess }) => {
+  const [name, setName] = useState(competency.name);
+  const [description, setDescription] = useState(competency.description);
+  const [type, setType] = useState(competency.type);
+  const [category, setCategory] = useState(competency.category || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await apiService.updateCompetency(competency.id, {
+        name,
+        description,
+        type,
+        category: category || undefined,
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update competency');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Competency</h2>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="label">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="input"
+              rows={4}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value)} className="input">
+              <option value="TECHNICAL">Technical</option>
+              <option value="BEHAVIORAL">Behavioral</option>
+              <option value="LEADERSHIP">Leadership</option>
+              <option value="FUNCTIONAL">Functional</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Category (Optional)</label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="input"
+              placeholder="e.g., Software Development, Communication"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button type="button" onClick={onClose} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary">
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
