@@ -394,6 +394,11 @@ class ApiService {
     return response.data;
   }
 
+  async deleteAllOrganizationalGoals() {
+    const response = await this.api.delete('/organizational-goals/all');
+    return response.data;
+  }
+
   async generateStrategicGoalsAI(data: {
     organizationName: string;
     industry: string;

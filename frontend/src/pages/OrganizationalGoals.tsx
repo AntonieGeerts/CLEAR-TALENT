@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, ChevronRight, ChevronDown, Edit2, Sparkles, Loader, Zap } from 'lucide-react';
+import { Target, Plus, ChevronRight, ChevronDown, Edit2, Sparkles, Loader, Zap, Trash2 } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface OrganizationalGoal {
@@ -48,6 +48,28 @@ export const OrganizationalGoals: React.FC = () => {
     }
   };
 
+  const handleDeleteAllGoals = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ALL organizational goals?\n\n` +
+      `This will permanently delete ${goals.length} goal${goals.length !== 1 ? 's' : ''} and all their children.\n\n` +
+      `This action cannot be undone!`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await apiService.deleteAllOrganizationalGoals();
+      await loadGoals();
+      alert('All organizational goals have been deleted successfully');
+    } catch (error: any) {
+      console.error('Failed to delete goals:', error);
+      alert(error.response?.data?.error || 'Failed to delete goals. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -64,16 +86,28 @@ export const OrganizationalGoals: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Organizational Goals</h1>
           <p className="text-gray-600 mt-1">Cascading goals aligned with strategic objectives</p>
         </div>
-        <button
-          onClick={() => {
-            setSelectedParent(null);
-            setShowCreateModal(true);
-          }}
-          className="btn btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Add Organizational Goal
-        </button>
+        <div className="flex items-center gap-3">
+          {goals.length > 0 && (
+            <button
+              onClick={handleDeleteAllGoals}
+              className="btn btn-secondary flex items-center gap-2 text-red-600 hover:bg-red-50 border-red-300"
+              title="Delete all goals"
+            >
+              <Trash2 size={18} />
+              Delete All Goals
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setSelectedParent(null);
+              setShowCreateModal(true);
+            }}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Add Organizational Goal
+          </button>
+        </div>
       </div>
 
       {/* Goal Hierarchy */}

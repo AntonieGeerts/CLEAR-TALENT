@@ -14,6 +14,7 @@ router.post('/create-from-ai', asyncHandler(OrganizationalGoalsController.create
 router.post('/generate-kpis', asyncHandler(OrganizationalGoalsController.generateKPIsForGoal));
 router.put('/:id', asyncHandler(OrganizationalGoalsController.updateGoal));
 router.put('/:id/kpis', asyncHandler(OrganizationalGoalsController.updateGoalKPIs));
+router.delete('/all', asyncHandler(OrganizationalGoalsController.deleteAllGoals));
 router.delete('/:id', asyncHandler(OrganizationalGoalsController.deleteGoal));
 
 export default router;

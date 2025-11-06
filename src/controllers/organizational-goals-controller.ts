@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../types';
-import { ValidationError, AuthorizationError } from '../types';
+import { ValidationError, AuthorizationError, NotFoundError } from '../types';
 import { AIOrganizationalGoalService } from '../services/organizational-goals/ai-organizational-goal-service';
 
 const prisma = new PrismaClient();
@@ -606,6 +606,40 @@ export class OrganizationalGoalsController {
       success: true,
       data: updatedGoal,
       message: 'Goal KPIs updated successfully',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Delete all organizational goals for the tenant
+   * Only accessible by ADMIN users
+   */
+  static async deleteAllGoals(req: AuthRequest, res: Response) {
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    // Only ADMIN can delete all goals
+    if (req.user!.role !== 'ADMIN') {
+      throw new AuthorizationError('Only administrators can delete all goals');
+    }
+
+    // Count goals before deletion
+    const goalsCount = await prisma.organizationalGoal.count({
+      where: { tenantId },
+    });
+
+    // Delete all goals for this tenant
+    const result = await prisma.organizationalGoal.deleteMany({
+      where: { tenantId },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        deletedCount: result.count,
+        previousCount: goalsCount,
+      },
+      message: `All organizational goals (${result.count}) have been deleted successfully`,
       timestamp: new Date().toISOString(),
     });
   }
