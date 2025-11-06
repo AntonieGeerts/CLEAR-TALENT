@@ -9,6 +9,8 @@ export const Competencies: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showGenerateByCategoryModal, setShowGenerateByCategoryModal] = useState(false);
+  const [showAssessmentQuestionsModal, setShowAssessmentQuestionsModal] = useState(false);
   const [selectedCompetency, setSelectedCompetency] = useState<Competency | null>(null);
   const [error, setError] = useState('');
 
@@ -44,6 +46,11 @@ export const Competencies: React.FC = () => {
     }
   };
 
+  const handleViewAssessmentQuestions = (competency: Competency) => {
+    setSelectedCompetency(competency);
+    setShowAssessmentQuestionsModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -58,7 +65,14 @@ export const Competencies: React.FC = () => {
             className="btn btn-secondary flex items-center space-x-2"
           >
             <Sparkles size={20} />
-            <span>AI Suggest</span>
+            <span>AI Suggest from JD</span>
+          </button>
+          <button
+            onClick={() => setShowGenerateByCategoryModal(true)}
+            className="btn btn-secondary flex items-center space-x-2"
+          >
+            <Sparkles size={20} />
+            <span>Generate by Category</span>
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -132,19 +146,28 @@ export const Competencies: React.FC = () => {
               {competency.category && (
                 <p className="text-xs text-gray-500 mb-4">Category: {competency.category}</p>
               )}
-              <div className="flex space-x-2">
+              <div className="space-y-2">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEdit(competency)}
+                    className="flex-1 btn btn-secondary text-sm py-2"
+                  >
+                    <Edit size={16} className="inline mr-1" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(competency.id)}
+                    className="btn btn-danger text-sm py-2"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
                 <button
-                  onClick={() => handleEdit(competency)}
-                  className="flex-1 btn btn-secondary text-sm py-2"
+                  onClick={() => handleViewAssessmentQuestions(competency)}
+                  className="w-full btn btn-secondary text-sm py-2 flex items-center justify-center space-x-1"
                 >
-                  <Edit size={16} className="inline mr-1" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(competency.id)}
-                  className="btn btn-danger text-sm py-2"
-                >
-                  <Trash2 size={16} />
+                  <Sparkles size={16} />
+                  <span>Assessment Questions</span>
                 </button>
               </div>
             </div>
@@ -189,6 +212,28 @@ export const Competencies: React.FC = () => {
           }}
         />
       )}
+
+      {/* Generate by Category Modal */}
+      {showGenerateByCategoryModal && (
+        <GenerateByCategoryModal
+          onClose={() => setShowGenerateByCategoryModal(false)}
+          onSuccess={() => {
+            setShowGenerateByCategoryModal(false);
+            loadCompetencies();
+          }}
+        />
+      )}
+
+      {/* Assessment Questions Modal */}
+      {showAssessmentQuestionsModal && selectedCompetency && (
+        <AssessmentQuestionsModal
+          competency={selectedCompetency}
+          onClose={() => {
+            setShowAssessmentQuestionsModal(false);
+            setSelectedCompetency(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -200,7 +245,7 @@ const CreateCompetencyModal: React.FC<{ onClose: () => void; onSuccess: () => vo
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState('TECHNICAL');
+  const [type, setType] = useState('CORE');
   const [category, setCategory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -262,10 +307,10 @@ const CreateCompetencyModal: React.FC<{ onClose: () => void; onSuccess: () => vo
           <div>
             <label className="label">Type</label>
             <select value={type} onChange={(e) => setType(e.target.value as any)} className="input">
-              <option value="TECHNICAL">Technical</option>
-              <option value="BEHAVIORAL">Behavioral</option>
+              <option value="CORE">Core</option>
               <option value="LEADERSHIP">Leadership</option>
               <option value="FUNCTIONAL">Functional</option>
+              <option value="TECHNICAL">Technical</option>
             </select>
           </div>
 
@@ -364,10 +409,10 @@ const EditCompetencyModal: React.FC<{
           <div>
             <label className="label">Type</label>
             <select value={type} onChange={(e) => setType(e.target.value as any)} className="input">
-              <option value="TECHNICAL">Technical</option>
-              <option value="BEHAVIORAL">Behavioral</option>
+              <option value="CORE">Core</option>
               <option value="LEADERSHIP">Leadership</option>
               <option value="FUNCTIONAL">Functional</option>
+              <option value="TECHNICAL">Technical</option>
             </select>
           </div>
 
@@ -520,6 +565,363 @@ const AISuggestModal: React.FC<{ onClose: () => void; onSuccess: () => void }> =
             </div>
             <div className="mt-6 flex justify-end">
               <button onClick={onSuccess} className="btn btn-primary">
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Generate by Category Modal Component
+const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({
+  onClose,
+  onSuccess,
+}) => {
+  const [category, setCategory] = useState<'CORE' | 'LEADERSHIP' | 'FUNCTIONAL'>('CORE');
+  const [count, setCount] = useState(5);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [generatedCompetencies, setGeneratedCompetencies] = useState<any[]>([]);
+  const [selectedCompetencies, setSelectedCompetencies] = useState<Set<number>>(new Set());
+
+  const categoryDescriptions = {
+    CORE: 'Core competencies are fundamental skills and behaviors essential for all employees across the organization, such as Customer Orientation, Personal Accountability, Work Standard Compliance, Communication, and Teamwork.',
+    LEADERSHIP: 'Leadership competencies are skills required for managing and leading teams, including Strategic Thinking, Business Acumen, Managing Performance, and Empowering Others.',
+    FUNCTIONAL: 'Functional competencies are role-specific technical skills and knowledge required to perform specific job functions effectively.',
+  };
+
+  const handleGenerate = async () => {
+    setError('');
+    setIsGenerating(true);
+    setGeneratedCompetencies([]);
+
+    try {
+      const response = await apiService.generateCompetenciesByCategory({
+        category,
+        count,
+      });
+      setGeneratedCompetencies(response.data || []);
+      setSelectedCompetencies(new Set(response.data?.map((_: any, i: number) => i) || []));
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate competencies');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const toggleSelection = (index: number) => {
+    const newSelected = new Set(selectedCompetencies);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedCompetencies(newSelected);
+  };
+
+  const handleSave = async () => {
+    setError('');
+    setIsSaving(true);
+
+    try {
+      const competenciesToSave = generatedCompetencies.filter((_, i) =>
+        selectedCompetencies.has(i)
+      );
+
+      for (const comp of competenciesToSave) {
+        await apiService.createCompetency({
+          name: comp.name,
+          description: comp.description,
+          type: comp.type,
+          category: comp.category,
+        });
+      }
+
+      onSuccess();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to save competencies');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center space-x-3 mb-6">
+          <Sparkles className="text-primary-600" size={28} />
+          <h2 className="text-2xl font-bold text-gray-900">Generate Competencies by Category</h2>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="label">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as any)}
+              className="input"
+              disabled={isGenerating || generatedCompetencies.length > 0}
+            >
+              <option value="CORE">Core Competencies</option>
+              <option value="LEADERSHIP">Leadership Competencies</option>
+              <option value="FUNCTIONAL">Functional Competencies</option>
+            </select>
+            <p className="text-sm text-gray-600 mt-2">{categoryDescriptions[category]}</p>
+          </div>
+
+          <div>
+            <label className="label">Number of Competencies</label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={count}
+              onChange={(e) => setCount(parseInt(e.target.value) || 5)}
+              className="input"
+              disabled={isGenerating || generatedCompetencies.length > 0}
+            />
+          </div>
+
+          {generatedCompetencies.length === 0 && (
+            <div className="flex justify-end space-x-3">
+              <button type="button" onClick={onClose} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="btn btn-primary"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader className="animate-spin mr-2" size={16} />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Competencies'
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {generatedCompetencies.length > 0 && (
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Generated Competencies ({selectedCompetencies.size} selected)
+              </h3>
+              <button
+                onClick={() => {
+                  setGeneratedCompetencies([]);
+                  setSelectedCompetencies(new Set());
+                  setError('');
+                }}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Start Over
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {generatedCompetencies.map((comp, index) => (
+                <div
+                  key={index}
+                  className={`card cursor-pointer border-2 transition-colors ${
+                    selectedCompetencies.has(index)
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => toggleSelection(index)}
+                >
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedCompetencies.has(index)}
+                      onChange={() => toggleSelection(index)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{comp.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{comp.description}</p>
+                      <div className="mt-2 flex items-center space-x-2">
+                        <span className="text-xs px-2 py-1 bg-gray-100 rounded">{comp.type}</span>
+                        {comp.category && (
+                          <span className="text-xs px-2 py-1 bg-primary-50 text-primary-700 rounded">
+                            {comp.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button type="button" onClick={onClose} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving || selectedCompetencies.size === 0}
+                className="btn btn-primary"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader className="animate-spin mr-2" size={16} />
+                    Saving...
+                  </>
+                ) : (
+                  `Save Selected (${selectedCompetencies.size})`
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Assessment Questions Modal Component
+const AssessmentQuestionsModal: React.FC<{
+  competency: Competency;
+  onClose: () => void;
+}> = ({ competency, onClose }) => {
+  const [count, setCount] = useState(5);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState('');
+  const [questions, setQuestions] = useState<any[]>([]);
+
+  const handleGenerate = async () => {
+    setError('');
+    setIsGenerating(true);
+
+    try {
+      const response = await apiService.generateAssessmentQuestions(competency.id, count);
+      setQuestions(response.data || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate assessment questions');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center space-x-3 mb-6">
+          <Sparkles className="text-primary-600" size={28} />
+          <h2 className="text-2xl font-bold text-gray-900">Assessment Questions</h2>
+        </div>
+
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-gray-900 mb-2">{competency.name}</h3>
+          <p className="text-sm text-gray-600 mb-2">{competency.description}</p>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs px-2 py-1 bg-gray-100 rounded">{competency.type}</span>
+            {competency.category && (
+              <span className="text-xs px-2 py-1 bg-primary-50 text-primary-700 rounded">
+                {competency.category}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="label">Number of Questions</label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={count}
+              onChange={(e) => setCount(parseInt(e.target.value) || 5)}
+              className="input"
+              disabled={isGenerating}
+            />
+          </div>
+
+          {questions.length === 0 && (
+            <div className="flex justify-end space-x-3">
+              <button type="button" onClick={onClose} className="btn btn-secondary">
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="btn btn-primary"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader className="animate-spin mr-2" size={16} />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Questions'
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {questions.length > 0 && (
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Generated Assessment Questions ({questions.length})
+            </h3>
+
+            <div className="space-y-4 mb-6">
+              {questions.map((q, index) => (
+                <div key={index} className="card">
+                  <div className="flex items-start space-x-3">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-sm">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-gray-900 mb-2">{q.statement}</p>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
+                          {q.type}
+                        </span>
+                      </div>
+                      {q.examples && q.examples.length > 0 && (
+                        <div className="mt-3 pl-3 border-l-2 border-gray-200">
+                          <p className="text-xs font-semibold text-gray-700 mb-1">Examples:</p>
+                          <ul className="text-xs text-gray-600 space-y-1">
+                            {q.examples.map((ex: string, i: number) => (
+                              <li key={i}>• {ex}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end">
+              <button onClick={onClose} className="btn btn-primary">
                 Done
               </button>
             </div>
