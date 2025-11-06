@@ -139,12 +139,13 @@ enum QuestionType {
 }
 
 model CompetencyQuestion {
-  id               String        @id @default(uuid())
-  competencyId     String        @map("competency_id")
-  statement        String        @db.Text
-  type             QuestionType
-  examples         String[]      @default([])
-  aiGenerated      Boolean       @default(false) @map("ai_generated")
+  id                  String        @id @default(uuid())
+  competencyId        String        @map("competency_id")
+  proficiencyLevelId  String?       @map("proficiency_level_id") // Link to Basic, Proficient, Advanced, Expert
+  statement           String        @db.Text // Behavior indicator
+  type                QuestionType
+  examples            String[]      @default([])
+  aiGenerated         Boolean       @default(false) @map("ai_generated")
 
   // Scoring system support
   scoringSystemId  String?       @map("scoring_system_id")
@@ -153,14 +154,20 @@ model CompetencyQuestion {
   scoreMax         Int?          @map("score_max") // Maximum score for this question
   behavioralAnchors Json?        @map("behavioral_anchors") // For BARS: { "1": "description", "2": "description", ... }
 
+  // 4-option rating scale (stored as JSON for flexibility)
+  // Example: { "1": "Never Demonstrated", "2": "Sometimes Demonstrated", "3": "Consistently Demonstrated", "4": "Consistently + Higher Level" }
+  ratingOptions    Json?         @map("rating_options")
+
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  competency     Competency     @relation(fields: [competencyId], references: [id], onDelete: Cascade)
-  scoringSystem  ScoringSystem? @relation(fields: [scoringSystemId], references: [id], onDelete: SetNull)
+  competency       Competency        @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  proficiencyLevel ProficiencyLevel? @relation(fields: [proficiencyLevelId], references: [id], onDelete: SetNull)
+  scoringSystem    ScoringSystem?    @relation(fields: [scoringSystemId], references: [id], onDelete: SetNull)
 
   @@index([competencyId])
+  @@index([proficiencyLevelId])
   @@index([scoringSystemId])
   @@map("competency_questions")
 }
@@ -199,6 +206,7 @@ model ProficiencyLevel {
   // Relations
   competency            Competency            @relation(fields: [competencyId], references: [id], onDelete: Cascade)
   behavioralIndicators  BehavioralIndicator[]
+  questions             CompetencyQuestion[]  // Questions for this proficiency level
   roleCompetencies      RoleCompetency[]
   skillProfiles         SkillProfile[]
 

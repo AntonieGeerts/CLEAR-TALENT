@@ -1,165 +1,101 @@
-# Migration Guide: Fix Duplicate Competencies
+# Database Migration Guide
 
-## Problem
+## Pending Migrations
 
-The competencies table was missing a unique constraint on `(name, tenantId)`, which allowed duplicate competencies with the same name to be created for the same tenant. This caused:
+There are 3 pending migrations that need to be applied to the production database:
 
-- Duplicate entries appearing on the `/competencies` page
-- Potential data inconsistencies
-- Confusion for users managing competencies
+1. `20251106_add_competency_questions` - Creates the competency_questions table
+2. `20251106_add_scoring_systems` - Creates scoring_systems table and adds scoring fields
+3. `20251106_add_proficiency_level_to_questions` - Links questions to proficiency levels
 
-## Solution
+## Running Migrations on Railway
 
-This migration adds a unique constraint to prevent duplicate competencies and includes scripts to clean up existing duplicates.
-
-## Migration Steps
-
-### Step 1: Backup Your Database
-
-Before running any migration, **always backup your database**:
+### Option 1: Via Railway CLI (Recommended)
 
 ```bash
-# For Railway/Heroku PostgreSQL
-# Export via your hosting provider's dashboard or CLI
+# Link to your Railway project (if not already linked)
+railway link
 
-# For local development
-pg_dump -U your_user -d clear_talent > backup_$(date +%Y%m%d_%H%M%S).sql
+# Select the backend service when prompted
+
+# Run migrations
+railway run npx prisma migrate deploy
 ```
 
-### Step 2: Run the Deduplication Script (Recommended)
+### Option 2: Via Railway Dashboard
 
-**Important:** Run this script **before** applying the migration to avoid constraint violations.
+1. Go to your Railway project dashboard
+2. Click on your backend service
+3. Go to "Settings" → "Variables"
+4. Copy the `DATABASE_URL` value
+5. Run locally with that database URL:
 
 ```bash
-# Install dependencies if needed
-npm install
-
-# Run the deduplication script
-npx ts-node scripts/deduplicate-competencies.ts
+DATABASE_URL="<paste-url-here>" npx prisma migrate deploy
 ```
 
-This script will:
-- Find all duplicate competencies (same name + tenantId)
-- Keep the oldest competency for each duplicate set
-- Update all references to point to the kept competency
-- Delete duplicate competencies and their related data
+### Option 3: Via Railway Shell
 
-### Step 3: Apply the Database Migration
+1. Go to Railway dashboard → Your backend service
+2. Click on "Deploy" → "Shell"
+3. Run: `npx prisma migrate deploy`
 
-Option A: Using Prisma Migrate (Recommended for production)
+## Updated Question Structure
 
-```bash
-# Generate Prisma client with new schema
-npx prisma generate
+### New Fields in CompetencyQuestion
 
-# Apply the migration
-npx prisma migrate deploy
-```
+Based on your Excel structure, questions now support:
 
-Option B: Manual SQL Migration
+1. **Proficiency Level Link** (`proficiencyLevelId`)
+   - Questions can be organized by proficiency level (Basic, Proficient, Advanced, Expert)
+   - Each question is associated with a specific proficiency level
 
-If you prefer to run the SQL directly:
+2. **Rating Options** (`ratingOptions`)
+   - Stores the 4 standardized options for each question
+   - Default structure:
+   ```json
+   {
+     "1": "Never Demonstrated",
+     "2": "Sometimes Demonstrated",
+     "3": "Consistently Demonstrated",
+     "4": "Consistently Demonstrated + shows evidence of higher level application"
+   }
+   ```
 
-```bash
-# Connect to your database
-psql $DATABASE_URL
+3. **Behavior Indicator** (`statement`)
+   - The main question text describing the expected behavior
 
-# Run the migration
-\i prisma/migrations/20251106054341_add_unique_constraint_to_competencies/migration.sql
-```
+### Excel Import Structure
 
-### Step 4: Verify the Migration
+Your Excel sheets should map to:
 
-Check that the unique constraint was added successfully:
+**Sheet per Competency → Tabs per Proficiency Level**
 
+Example for "Effective Communication" competency:
+
+**Tab: Basic**
+| Behavior Indicator | Option 1 | Option 2 | Option 3 | Option 4 |
+|-------------------|----------|----------|----------|----------|
+| Keeps immediate superiors informed... | Never | Sometimes | Consistently | Consistently + higher |
+
+## After Migration
+
+Once migrations are complete:
+
+1. Verify tables exist:
 ```sql
--- Check the constraint exists
-SELECT conname, contype
-FROM pg_constraint
-WHERE conrelid = 'competencies'::regclass
-AND conname = 'unique_competency_per_tenant';
-
--- Check for any remaining duplicates (should return 0 rows)
-SELECT name, tenant_id, COUNT(*)
-FROM competencies
-GROUP BY name, tenant_id
-HAVING COUNT(*) > 1;
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN ('competency_questions', 'scoring_systems');
 ```
 
-### Step 5: Update Application Code
-
-The application code has been updated to:
-
-1. **Schema**: Added `@@unique([name, tenantId])` constraint to the Competency model
-2. **Seed Script**: Now checks for existing competencies before creating new ones
-3. **API**: Will automatically reject attempts to create duplicate competencies
-
-After deploying:
-
-```bash
-# Build the backend
-npm run build
-
-# Restart your application
-# (Railway/Vercel will auto-deploy on push)
-```
-
-## Rollback (If Needed)
-
-If you need to rollback this migration:
-
+2. Check the seed data loaded:
 ```sql
--- Remove the unique constraint
-DROP INDEX IF EXISTS unique_competency_per_tenant;
+SELECT COUNT(*) FROM scoring_systems;
+-- Should return 6 (the default scoring systems)
 ```
 
-Then revert the schema changes in `prisma/schema.prisma`.
-
-## Testing
-
-After migration, test the following:
-
-1. ✅ View `/competencies` page - no duplicates should appear
-2. ✅ Try to create a competency with an existing name - should fail with error
-3. ✅ Create a competency with a new name - should succeed
-4. ✅ Run the seed script multiple times - should not create duplicates
-
-## Troubleshooting
-
-### Issue: Migration fails with "duplicate key value"
-
-**Solution**: Run the deduplication script first (Step 2)
-
-```bash
-npx ts-node scripts/deduplicate-competencies.ts
-```
-
-### Issue: Foreign key constraint violation during deduplication
-
-**Solution**: The deduplication script handles this automatically by updating references first. If you still see errors, check for:
-- Custom foreign keys not covered by the script
-- Concurrent writes during migration
-
-### Issue: Lost proficiency levels after deduplication
-
-**Expected**: When duplicates are removed, only the proficiency levels for the kept competency remain. Review the deduplication script output to see which competencies were kept.
-
-**Solution**: If needed, manually recreate proficiency levels for the kept competencies using the UI or API.
-
-## Files Changed
-
-- `prisma/schema.prisma` - Added unique constraint
-- `prisma/seed.ts` - Updated to check for existing competencies
-- `scripts/deduplicate-competencies.ts` - New deduplication script
-- `prisma/migrations/20251106054341_add_unique_constraint_to_competencies/migration.sql` - Database migration
-
-## Support
-
-If you encounter issues during migration, please:
-
-1. Check the logs from the deduplication script
-2. Verify your database backup is available
-3. Contact the development team with:
-   - Error messages
-   - Number of duplicates found
-   - Database provider (PostgreSQL version)
+3. The frontend question modal will now display:
+   - Scoring system selector
+   - Questions organized by proficiency level
+   - 4-option rating scale per question
