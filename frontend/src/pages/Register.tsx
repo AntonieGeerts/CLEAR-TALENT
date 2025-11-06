@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Logo } from '../components/Logo';
+import { branding } from '../config/branding';
 import { UserPlus } from 'lucide-react';
 
 export const Register: React.FC = () => {
@@ -44,11 +46,11 @@ export const Register: React.FC = () => {
       <div className="max-w-md w-full">
         <div className="card">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 text-white rounded-full mb-4">
-              <UserPlus size={32} />
+            <div className="flex justify-center mb-6">
+              <Logo size="lg" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-600 mt-2">Join CLEAR-TALENT</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h2>
+            <p className="text-gray-600">Join {branding.company.name} today</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

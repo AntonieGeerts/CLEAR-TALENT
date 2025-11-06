@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Logo } from './Logo';
+import { Footer } from './Footer';
 import {
   LayoutDashboard,
   BookOpen,
@@ -11,7 +13,6 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles,
   Building2,
   AlertTriangle,
   FlagTriangleRight,
@@ -60,10 +61,7 @@ export const Layout: React.FC = () => {
         <div className="h-full flex flex-col">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="text-primary-600" size={24} />
-              <span className="text-xl font-bold text-gray-900">CLEARTalent</span>
-            </div>
+            <Logo size="md" />
             <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden text-gray-500 hover:text-gray-700"
@@ -137,9 +135,12 @@ export const Layout: React.FC = () => {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-8">
+        <main className="p-4 lg:p-8 min-h-[calc(100vh-4rem)]">
           <Outlet />
         </main>
+
+        {/* Footer */}
+        <Footer />
       </div>
 
       {/* Mobile Sidebar Backdrop */}

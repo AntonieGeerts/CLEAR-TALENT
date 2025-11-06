@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Logo } from '../components/Logo';
+import { branding } from '../config/branding';
 import { LogIn } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -31,11 +33,10 @@ export const Login: React.FC = () => {
       <div className="max-w-md w-full">
         <div className="card">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 text-white rounded-full mb-4">
-              <LogIn size={32} />
+            <div className="flex justify-center mb-6">
+              <Logo size="lg" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">CLEAR-TALENT</h1>
-            <p className="text-gray-600 mt-2">Performance Management System</p>
+            <p className="text-gray-600 mt-2">{branding.company.description}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
