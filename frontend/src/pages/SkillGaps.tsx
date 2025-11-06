@@ -14,7 +14,6 @@ interface SkillGap {
 export const SkillGaps: React.FC = () => {
   const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
   const [gaps, setGaps] = useState<SkillGap[]>([]);
-  const [error, setError] = useState('');
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -40,12 +39,6 @@ export const SkillGaps: React.FC = () => {
           <span>Analyze Skill Gaps</span>
         </button>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
 
       {gaps.length === 0 ? (
         <div className="card text-center py-12">
