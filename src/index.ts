@@ -76,45 +76,34 @@ async function initializeDatabase() {
       // Ensure all CompetencyType enum values exist
       logger.info('📝 Ensuring CompetencyType enum values...');
 
-      await prisma.$executeRawUnsafe(`
-        DO $$
-        BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'CORE' AND enumtypid = 'CompetencyType'::regtype) THEN
-            ALTER TYPE "CompetencyType" ADD VALUE 'CORE';
-          END IF;
-        END $$;
-      `);
-      logger.info('✅ CORE value ensured');
+      // Try to add each enum value - PostgreSQL 9.1+ supports IF NOT EXISTS
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'CORE';`);
+        logger.info('✅ CORE value ensured');
+      } catch (e: any) {
+        logger.warn(`CORE value: ${e.message}`);
+      }
 
-      await prisma.$executeRawUnsafe(`
-        DO $$
-        BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'LEADERSHIP' AND enumtypid = 'CompetencyType'::regtype) THEN
-            ALTER TYPE "CompetencyType" ADD VALUE 'LEADERSHIP';
-          END IF;
-        END $$;
-      `);
-      logger.info('✅ LEADERSHIP value ensured');
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'LEADERSHIP';`);
+        logger.info('✅ LEADERSHIP value ensured');
+      } catch (e: any) {
+        logger.warn(`LEADERSHIP value: ${e.message}`);
+      }
 
-      await prisma.$executeRawUnsafe(`
-        DO $$
-        BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'FUNCTIONAL' AND enumtypid = 'CompetencyType'::regtype) THEN
-            ALTER TYPE "CompetencyType" ADD VALUE 'FUNCTIONAL';
-          END IF;
-        END $$;
-      `);
-      logger.info('✅ FUNCTIONAL value ensured');
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'FUNCTIONAL';`);
+        logger.info('✅ FUNCTIONAL value ensured');
+      } catch (e: any) {
+        logger.warn(`FUNCTIONAL value: ${e.message}`);
+      }
 
-      await prisma.$executeRawUnsafe(`
-        DO $$
-        BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'TECHNICAL' AND enumtypid = 'CompetencyType'::regtype) THEN
-            ALTER TYPE "CompetencyType" ADD VALUE 'TECHNICAL';
-          END IF;
-        END $$;
-      `);
-      logger.info('✅ TECHNICAL value ensured');
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'TECHNICAL';`);
+        logger.info('✅ TECHNICAL value ensured');
+      } catch (e: any) {
+        logger.warn(`TECHNICAL value: ${e.message}`);
+      }
 
       logger.info('✅ Migration fixes applied successfully');
     } catch (migrationError: any) {
