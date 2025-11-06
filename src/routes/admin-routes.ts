@@ -12,4 +12,12 @@ const router = Router();
  */
 router.get('/install-goal-template', asyncHandler(AdminController.installGoalTemplate));
 
+/**
+ * Temporary admin endpoint to install competency generation template
+ * This can be called via browser to set up production database
+ *
+ * Usage: GET https://your-domain.com/api/v1/admin/install-competency-template
+ */
+router.get('/install-competency-template', asyncHandler(AdminController.installCompetencyTemplate));
+
 export default router;
