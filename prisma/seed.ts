@@ -84,25 +84,25 @@ async function main() {
 
   console.log('✓ Created HR manager:', hrUser.email);
 
-  // Create sample competencies
+  // Create sample competencies (prevent duplicates)
   const competencies = [
     {
       name: 'Communication',
-      type: 'BEHAVIORAL',
+      type: 'BEHAVIORAL' as const,
       description: 'Ability to effectively convey information and ideas to others',
       category: 'Soft Skills',
       tags: ['interpersonal', 'collaboration'],
     },
     {
       name: 'Technical Problem Solving',
-      type: 'TECHNICAL',
+      type: 'TECHNICAL' as const,
       description: 'Ability to analyze complex technical problems and develop solutions',
       category: 'Engineering',
       tags: ['engineering', 'problem-solving'],
     },
     {
       name: 'Leadership',
-      type: 'LEADERSHIP',
+      type: 'LEADERSHIP' as const,
       description: 'Ability to guide, motivate, and develop team members',
       category: 'Leadership',
       tags: ['management', 'people'],
@@ -110,35 +110,53 @@ async function main() {
   ];
 
   for (const comp of competencies) {
-    const competency = await prisma.competency.create({
-      data: {
+    // Check if competency already exists to prevent duplicates
+    let competency = await prisma.competency.findFirst({
+      where: {
+        name: comp.name,
         tenantId: demoTenant.id,
-        createdBy: adminUser.id,
-        ...comp,
+      },
+      include: {
+        proficiencyLevels: true,
       },
     });
 
-    console.log(`✓ Created competency: ${competency.name}`);
-
-    // Create proficiency levels for each competency
-    const levels = [
-      { name: 'Basic', numericLevel: 1, description: 'Foundational understanding', sortOrder: 1 },
-      { name: 'Intermediate', numericLevel: 2, description: 'Working knowledge with guidance', sortOrder: 2 },
-      { name: 'Advanced', numericLevel: 3, description: 'Independent practitioner', sortOrder: 3 },
-      { name: 'Expert', numericLevel: 4, description: 'Deep expertise, can mentor others', sortOrder: 4 },
-      { name: 'Master', numericLevel: 5, description: 'Industry leader, drives innovation', sortOrder: 5 },
-    ];
-
-    for (const level of levels) {
-      await prisma.proficiencyLevel.create({
+    if (competency) {
+      console.log(`✓ Competency already exists: ${competency.name}`);
+    } else {
+      competency = await prisma.competency.create({
         data: {
-          competencyId: competency.id,
-          ...level,
+          tenantId: demoTenant.id,
+          createdBy: adminUser.id,
+          ...comp,
+        },
+        include: {
+          proficiencyLevels: true,
         },
       });
-    }
 
-    console.log(`  ✓ Created ${levels.length} proficiency levels for ${competency.name}`);
+      console.log(`✓ Created competency: ${competency.name}`);
+
+      // Create proficiency levels for each competency
+      const levels = [
+        { name: 'Basic', numericLevel: 1, description: 'Foundational understanding', sortOrder: 1 },
+        { name: 'Intermediate', numericLevel: 2, description: 'Working knowledge with guidance', sortOrder: 2 },
+        { name: 'Advanced', numericLevel: 3, description: 'Independent practitioner', sortOrder: 3 },
+        { name: 'Expert', numericLevel: 4, description: 'Deep expertise, can mentor others', sortOrder: 4 },
+        { name: 'Master', numericLevel: 5, description: 'Industry leader, drives innovation', sortOrder: 5 },
+      ];
+
+      for (const level of levels) {
+        await prisma.proficiencyLevel.create({
+          data: {
+            competencyId: competency.id,
+            ...level,
+          },
+        });
+      }
+
+      console.log(`  ✓ Created ${levels.length} proficiency levels for ${competency.name}`);
+    }
   }
 
   // Create AI prompt templates

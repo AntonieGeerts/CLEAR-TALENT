@@ -122,6 +122,7 @@ model Competency {
   embeddingVectors      EmbeddingVector[]
   skillProfiles         SkillProfile[]
 
+  @@unique([name, tenantId], map: "unique_competency_per_tenant")
   @@index([tenantId])
   @@index([type])
   @@index([category])
