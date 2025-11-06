@@ -764,7 +764,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
                   value={organizationName}
                   onChange={(e) => setOrganizationName(e.target.value)}
                   className="input"
-                  placeholder="e.g., Harbour City Restaurants"
+                  placeholder="e.g., Clear Store"
                   required
                 />
               </div>
@@ -788,7 +788,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
                   onChange={(e) => setOrganizationDescription(e.target.value)}
                   className="input"
                   rows={6}
-                  placeholder="Describe your organization, its mission, key challenges, and strategic priorities. For example: 'Harbour City is a group of restaurants focusing on authentic Asian cuisine. We operate 5 locations across the city and aim to expand while maintaining quality and customer satisfaction...'"
+                  placeholder="Describe your organization, its mission, key challenges, and strategic priorities. For example: 'Clear Store is a retail organization focusing on quality products and customer service. We operate 5 locations across the city and aim to expand while maintaining quality and customer satisfaction...'"
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
