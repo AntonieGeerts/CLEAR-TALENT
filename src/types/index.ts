@@ -54,7 +54,7 @@ export interface PromptVariables {
 // AI Response Types
 export interface CompetencySuggestion {
   name: string;
-  type: 'TECHNICAL' | 'BEHAVIORAL' | 'LEADERSHIP' | 'FUNCTIONAL';
+  type: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL' | 'TECHNICAL';
   category: string;
   description: string;
   confidence?: number;

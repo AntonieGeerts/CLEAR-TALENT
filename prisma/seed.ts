@@ -88,7 +88,7 @@ async function main() {
   const competencies = [
     {
       name: 'Communication',
-      type: 'BEHAVIORAL' as const,
+      type: 'CORE' as const,
       description: 'Ability to effectively convey information and ideas to others',
       category: 'Soft Skills',
       tags: ['interpersonal', 'collaboration'],
@@ -174,7 +174,7 @@ Job Description:
 
 Please identify 5-8 key competencies required for this role. For each competency, provide:
 1. Name (concise, 2-4 words)
-2. Type (TECHNICAL, BEHAVIORAL, LEADERSHIP, or FUNCTIONAL)
+2. Type (CORE, LEADERSHIP, FUNCTIONAL, or TECHNICAL)
 3. Category (e.g., "Engineering", "Communication", "Management")
 4. Description (1-2 sentences explaining what this competency means in this context)
 

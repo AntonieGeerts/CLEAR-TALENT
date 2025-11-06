@@ -7,10 +7,10 @@ const prisma = new PrismaClient();
 
 // Define CompetencyType enum locally (matches Prisma schema)
 enum CompetencyType {
-  TECHNICAL = 'TECHNICAL',
-  BEHAVIORAL = 'BEHAVIORAL',
+  CORE = 'CORE',
   LEADERSHIP = 'LEADERSHIP',
-  FUNCTIONAL = 'FUNCTIONAL'
+  FUNCTIONAL = 'FUNCTIONAL',
+  TECHNICAL = 'TECHNICAL'
 }
 
 export class CompetencyService {
