@@ -582,6 +582,11 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
 }) => {
   const [category, setCategory] = useState<'CORE' | 'LEADERSHIP' | 'FUNCTIONAL'>('CORE');
   const [count, setCount] = useState(5);
+  const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [companySize, setCompanySize] = useState('');
+  const [companyValues, setCompanyValues] = useState('');
+  const [companyDescription, setCompanyDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -596,6 +601,17 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
 
   const handleGenerate = async () => {
     setError('');
+
+    // Validate required fields
+    if (!companyName.trim()) {
+      setError('Company name is required');
+      return;
+    }
+    if (!industry.trim()) {
+      setError('Industry is required');
+      return;
+    }
+
     setIsGenerating(true);
     setGeneratedCompetencies([]);
 
@@ -603,6 +619,13 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
       const response = await apiService.generateCompetenciesByCategory({
         category,
         count,
+        companyContext: {
+          companyName: companyName.trim(),
+          industry: industry.trim(),
+          companySize: companySize || undefined,
+          companyValues: companyValues.trim() || undefined,
+          companyDescription: companyDescription.trim() || undefined,
+        },
       });
       setGeneratedCompetencies(response.data || []);
       setSelectedCompetencies(new Set(response.data?.map((_: any, i: number) => i) || []));
@@ -664,19 +687,102 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
         )}
 
         <div className="space-y-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-blue-800">
+              <strong>About Company Context:</strong> Providing your company information helps AI generate competencies tailored to your organization's specific industry, values, and culture.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">
+                Company Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="input"
+                placeholder="e.g., Acme Corporation"
+                disabled={isGenerating || generatedCompetencies.length > 0}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="label">
+                Industry <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                className="input"
+                placeholder="e.g., Technology, Healthcare, Retail"
+                disabled={isGenerating || generatedCompetencies.length > 0}
+                required
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="label">Category</label>
+            <label className="label">Company Size (Optional)</label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as any)}
+              value={companySize}
+              onChange={(e) => setCompanySize(e.target.value)}
               className="input"
               disabled={isGenerating || generatedCompetencies.length > 0}
             >
-              <option value="CORE">Core Competencies</option>
-              <option value="LEADERSHIP">Leadership Competencies</option>
-              <option value="FUNCTIONAL">Functional Competencies</option>
+              <option value="">Select size...</option>
+              <option value="Small">Small (1-50 employees)</option>
+              <option value="Medium">Medium (51-200 employees)</option>
+              <option value="Large">Large (201-1000 employees)</option>
+              <option value="Enterprise">Enterprise (1000+ employees)</option>
             </select>
-            <p className="text-sm text-gray-600 mt-2">{categoryDescriptions[category]}</p>
+          </div>
+
+          <div>
+            <label className="label">Company Values (Optional)</label>
+            <textarea
+              value={companyValues}
+              onChange={(e) => setCompanyValues(e.target.value)}
+              className="input"
+              rows={2}
+              placeholder="e.g., Innovation, Customer First, Integrity, Teamwork"
+              disabled={isGenerating || generatedCompetencies.length > 0}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              List your core values to help AI align competencies with your culture
+            </p>
+          </div>
+
+          <div>
+            <label className="label">Company Description (Optional)</label>
+            <textarea
+              value={companyDescription}
+              onChange={(e) => setCompanyDescription(e.target.value)}
+              className="input"
+              rows={3}
+              placeholder="Brief description of your company, products/services, and what makes you unique"
+              disabled={isGenerating || generatedCompetencies.length > 0}
+            />
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <div>
+              <label className="label">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as any)}
+                className="input"
+                disabled={isGenerating || generatedCompetencies.length > 0}
+              >
+                <option value="CORE">Core Competencies</option>
+                <option value="LEADERSHIP">Leadership Competencies</option>
+                <option value="FUNCTIONAL">Functional Competencies</option>
+              </select>
+              <p className="text-sm text-gray-600 mt-2">{categoryDescriptions[category]}</p>
+            </div>
           </div>
 
           <div>

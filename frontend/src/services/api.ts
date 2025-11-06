@@ -100,6 +100,13 @@ class ApiService {
   async generateCompetenciesByCategory(data: {
     category: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL';
     count?: number;
+    companyContext?: {
+      companyName: string;
+      industry: string;
+      companySize?: string;
+      companyValues?: string;
+      companyDescription?: string;
+    };
   }) {
     const response = await this.api.post('/ai/competencies/generate-by-category', data);
     return response.data;

@@ -85,7 +85,7 @@ export class AIController {
    * Generate competencies by category
    */
   static async generateByCategory(req: AuthRequest, res: Response) {
-    const { category, count = 5 } = req.body;
+    const { category, count = 5, companyContext } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
 
@@ -100,7 +100,8 @@ export class AIController {
       tenantId,
       userId,
       category,
-      count
+      count,
+      companyContext
     );
 
     res.json({

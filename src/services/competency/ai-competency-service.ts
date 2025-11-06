@@ -161,18 +161,26 @@ export class AICompetencyService {
     tenantId: string,
     userId: string,
     category: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL',
-    count: number = 5
+    count: number = 5,
+    companyContext?: {
+      companyName: string;
+      industry: string;
+      companySize?: string;
+      companyValues?: string;
+      companyDescription?: string;
+    }
   ) {
     try {
       aiLogger.info('Generating competencies by category', {
         category,
         count,
+        companyContext,
       });
 
       const categoryDescriptions = {
-        CORE: 'Core competencies are fundamental skills and behaviors essential for all employees, such as Customer Orientation, Personal Accountability, Work Standard Compliance, Communication, and Teamwork.',
-        LEADERSHIP: 'Leadership competencies are skills required for managing and leading teams, such as Strategic Thinking, People Development, Decision Making, Change Management, and Vision Setting.',
-        FUNCTIONAL: 'Functional competencies are role-specific technical skills and knowledge required for particular job functions, such as Technical Expertise, Process Management, Quality Assurance, and Industry Knowledge.',
+        CORE: 'Core competencies are fundamental skills and behaviors essential for all employees across the organization.',
+        LEADERSHIP: 'Leadership competencies are skills required for managing and leading teams effectively.',
+        FUNCTIONAL: 'Functional competencies are role-specific technical skills and knowledge required for particular job functions.',
       };
 
       const response = await this.orchestrator.generateFromTemplate(
@@ -182,6 +190,11 @@ export class AICompetencyService {
           category,
           categoryDescription: categoryDescriptions[category],
           count,
+          companyName: companyContext?.companyName || 'Your Organization',
+          industry: companyContext?.industry || 'General Business',
+          companySize: companyContext?.companySize || undefined,
+          companyValues: companyContext?.companyValues || undefined,
+          companyDescription: companyContext?.companyDescription || undefined,
         },
         {
           tenantId,

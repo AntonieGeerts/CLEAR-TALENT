@@ -15,28 +15,60 @@ async function addCompetencyGenerationTemplates() {
         },
       },
       update: {
-        template: `Generate {{count}} {{category}} competencies for a performance management system.
+        template: `Generate {{count}} {{category}} competencies for a performance management system tailored to the following organization:
 
-{{category}} Competencies:
+**Organization Context:**
+- Company: {{companyName}}
+- Industry: {{industry}}
+{{#companySize}}- Size: {{companySize}}{{/companySize}}
+{{#companyValues}}- Values: {{companyValues}}{{/companyValues}}
+{{#companyDescription}}- Description: {{companyDescription}}{{/companyDescription}}
+
+**{{category}} Competencies:**
 {{categoryDescription}}
 
-For each competency, provide:
-1. **name**: Clear, concise competency name (2-4 words)
-2. **description**: Detailed description of what this competency means and why it's important (2-3 sentences)
-3. **category**: A sub-category or focus area for this competency
+**Examples of {{category}} Competencies:**
+{{#if_CORE}}
+- Customer Orientation: Understanding and meeting customer needs
+- Effective Communication: Conveying information clearly and professionally
+- Personal Accountability: Taking ownership of responsibilities
+- Teamwork and Collaboration: Working effectively with others
+- Work Standard Compliance: Following policies and quality standards
+{{/if_CORE}}
+{{#if_LEADERSHIP}}
+- Business Acumen and Entrepreneurial Orientation: Understanding business drivers
+- Empowering Others: Developing and enabling team members
+- Managing Performance: Setting expectations and providing feedback
+- Strategic and Analytical Thinking: Long-term planning and problem-solving
+- Total Work System: Optimizing processes and workflows
+{{/if_LEADERSHIP}}
+{{#if_FUNCTIONAL}}
+- Technical Expertise: Role-specific technical skills
+- Process Management: Managing workflows efficiently
+- Quality Assurance: Maintaining standards
+- Innovation: Developing new solutions
+- Industry Knowledge: Understanding sector-specific requirements
+{{/if_FUNCTIONAL}}
 
-Requirements:
-- Each competency should be distinct and measurable
-- Focus on observable behaviors and outcomes
-- Make them relevant to workplace performance
-- Ensure they can be assessed on a proficiency scale
+**Requirements:**
+For each competency, provide:
+1. **name**: Clear, concise competency name (2-5 words)
+2. **description**: Detailed description relevant to {{industry}} industry (2-3 sentences)
+3. **category**: A specific sub-category or focus area
+
+Make competencies:
+- Specific to {{companyName}}'s industry and context
+- Distinct and measurable with observable behaviors
+- Appropriate for the organization's size and values
+- Assessable on a proficiency scale (Basic → Expert → Master)
+- Relevant to actual workplace performance
 
 Return ONLY a valid JSON array with no additional text or explanation. Use this exact structure:
 
 [
   {
     "name": "Customer Orientation",
-    "description": "Demonstrates a commitment to understanding and meeting customer needs. Actively seeks customer feedback and uses it to improve service delivery and build long-term relationships.",
+    "description": "Demonstrates a commitment to understanding and meeting customer needs in the {{industry}} sector. Actively seeks customer feedback and uses it to improve service delivery and build long-term relationships.",
     "category": "Customer Service"
   },
   {
@@ -49,35 +81,72 @@ Return ONLY a valid JSON array with no additional text or explanation. Use this 
           count: 'Number of competencies to generate',
           category: 'CORE | LEADERSHIP | FUNCTIONAL',
           categoryDescription: 'Description of the category',
+          companyName: 'Company name',
+          industry: 'Industry or sector',
+          companySize: 'Optional: Company size (Small/Medium/Large/Enterprise)',
+          companyValues: 'Optional: Core company values',
+          companyDescription: 'Optional: Brief company description',
         },
         promptType: 'generate-competencies',
-        version: 1,
+        version: 2,
       },
       create: {
         name: 'generate-by-category',
         module: 'COMPETENCY',
-        template: `Generate {{count}} {{category}} competencies for a performance management system.
+        template: `Generate {{count}} {{category}} competencies for a performance management system tailored to the following organization:
 
-{{category}} Competencies:
+**Organization Context:**
+- Company: {{companyName}}
+- Industry: {{industry}}
+{{#companySize}}- Size: {{companySize}}{{/companySize}}
+{{#companyValues}}- Values: {{companyValues}}{{/companyValues}}
+{{#companyDescription}}- Description: {{companyDescription}}{{/companyDescription}}
+
+**{{category}} Competencies:**
 {{categoryDescription}}
 
-For each competency, provide:
-1. **name**: Clear, concise competency name (2-4 words)
-2. **description**: Detailed description of what this competency means and why it's important (2-3 sentences)
-3. **category**: A sub-category or focus area for this competency
+**Examples of {{category}} Competencies:**
+{{#if_CORE}}
+- Customer Orientation: Understanding and meeting customer needs
+- Effective Communication: Conveying information clearly and professionally
+- Personal Accountability: Taking ownership of responsibilities
+- Teamwork and Collaboration: Working effectively with others
+- Work Standard Compliance: Following policies and quality standards
+{{/if_CORE}}
+{{#if_LEADERSHIP}}
+- Business Acumen and Entrepreneurial Orientation: Understanding business drivers
+- Empowering Others: Developing and enabling team members
+- Managing Performance: Setting expectations and providing feedback
+- Strategic and Analytical Thinking: Long-term planning and problem-solving
+- Total Work System: Optimizing processes and workflows
+{{/if_LEADERSHIP}}
+{{#if_FUNCTIONAL}}
+- Technical Expertise: Role-specific technical skills
+- Process Management: Managing workflows efficiently
+- Quality Assurance: Maintaining standards
+- Innovation: Developing new solutions
+- Industry Knowledge: Understanding sector-specific requirements
+{{/if_FUNCTIONAL}}
 
-Requirements:
-- Each competency should be distinct and measurable
-- Focus on observable behaviors and outcomes
-- Make them relevant to workplace performance
-- Ensure they can be assessed on a proficiency scale
+**Requirements:**
+For each competency, provide:
+1. **name**: Clear, concise competency name (2-5 words)
+2. **description**: Detailed description relevant to {{industry}} industry (2-3 sentences)
+3. **category**: A specific sub-category or focus area
+
+Make competencies:
+- Specific to {{companyName}}'s industry and context
+- Distinct and measurable with observable behaviors
+- Appropriate for the organization's size and values
+- Assessable on a proficiency scale (Basic → Expert → Master)
+- Relevant to actual workplace performance
 
 Return ONLY a valid JSON array with no additional text or explanation. Use this exact structure:
 
 [
   {
     "name": "Customer Orientation",
-    "description": "Demonstrates a commitment to understanding and meeting customer needs. Actively seeks customer feedback and uses it to improve service delivery and build long-term relationships.",
+    "description": "Demonstrates a commitment to understanding and meeting customer needs in the {{industry}} sector. Actively seeks customer feedback and uses it to improve service delivery and build long-term relationships.",
     "category": "Customer Service"
   },
   {
@@ -90,9 +159,14 @@ Return ONLY a valid JSON array with no additional text or explanation. Use this 
           count: 'Number of competencies to generate',
           category: 'CORE | LEADERSHIP | FUNCTIONAL',
           categoryDescription: 'Description of the category',
+          companyName: 'Company name',
+          industry: 'Industry or sector',
+          companySize: 'Optional: Company size (Small/Medium/Large/Enterprise)',
+          companyValues: 'Optional: Core company values',
+          companyDescription: 'Optional: Brief company description',
         },
         promptType: 'generate-competencies',
-        version: 1,
+        version: 2,
       },
     });
 
