@@ -441,41 +441,54 @@ export class OrganizationalGoalsController {
    * Generate strategic goals with AI (Balanced Scorecard + KPIs)
    */
   static async generateStrategicGoals(req: AuthRequest, res: Response) {
-    const tenantId = req.tenant!.id;
-    const userId = req.user!.id;
+    try {
+      const tenantId = req.tenant!.id;
+      const userId = req.user!.id;
 
-    // Only ADMIN can generate strategic goals
-    const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD'];
-    if (!allowedRoles.includes(req.user!.role)) {
-      throw new AuthorizationError('Insufficient permissions to generate strategic goals');
-    }
-
-    const { organizationName, industry, organizationDescription } = req.body;
-
-    if (!organizationName || !industry || !organizationDescription) {
-      throw new ValidationError('Organization name, industry, and description are required');
-    }
-
-    // Generate goals using AI
-    const generatedGoals = await AIOrganizationalGoalService.generateStrategicGoals(
-      tenantId,
-      userId,
-      {
-        organizationName,
-        industry,
-        organizationDescription,
+      // Only ADMIN can generate strategic goals
+      const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD'];
+      if (!allowedRoles.includes(req.user!.role)) {
+        throw new AuthorizationError('Insufficient permissions to generate strategic goals');
       }
-    );
 
-    res.json({
-      success: true,
-      data: {
-        goals: generatedGoals,
-        count: generatedGoals.length,
-      },
-      message: 'Strategic goals generated successfully',
-      timestamp: new Date().toISOString(),
-    });
+      const { organizationName, industry, organizationDescription } = req.body;
+
+      if (!organizationName || !industry || !organizationDescription) {
+        throw new ValidationError('Organization name, industry, and description are required');
+      }
+
+      // Generate goals using AI
+      const generatedGoals = await AIOrganizationalGoalService.generateStrategicGoals(
+        tenantId,
+        userId,
+        {
+          organizationName,
+          industry,
+          organizationDescription,
+        }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          goals: generatedGoals,
+          count: generatedGoals.length,
+        },
+        message: 'Strategic goals generated successfully',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Error generating strategic goals:', error);
+
+      // Return detailed error for debugging
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to generate strategic goals',
+        details: error.stack,
+        hint: 'Please ensure the AI prompt template is installed. Run: npm run add-goal-template',
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 
   /**
