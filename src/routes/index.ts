@@ -9,6 +9,7 @@ import tenantRoutes from './tenant-routes';
 import userRoutes from './user-routes';
 import organizationalGoalsRoutes from './organizational-goals-routes';
 import pipRoutes from './pip-routes';
+import adminRoutes from './admin-routes';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -27,6 +28,7 @@ router.get('/health', (req, res) => {
 // Public routes
 router.use('/auth', authRoutes);
 router.use('/setup', setupRoutes);
+router.use('/admin', adminRoutes); // Temporary admin endpoints for setup
 
 // Protected routes (require authentication)
 router.use('/competencies', authenticate, competencyRoutes);
