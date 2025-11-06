@@ -758,16 +758,24 @@ const AssessmentQuestionsModal: React.FC<{
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
+  const [scoringSystems, setScoringSystems] = useState<any[]>([]);
+  const [selectedScoringSystem, setSelectedScoringSystem] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newQuestion, setNewQuestion] = useState({
     statement: '',
     type: 'BEHAVIORAL' as 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE',
     examples: [''],
+    weight: 1.0,
+    scoreMin: 1,
+    scoreMax: 5,
   });
 
-  // Load existing questions on mount
+  // Load existing questions and scoring systems on mount
   useEffect(() => {
-    loadQuestions();
+    const loadData = async () => {
+      await Promise.all([loadQuestions(), loadScoringSystems()]);
+    };
+    loadData();
   }, []);
 
   const loadQuestions = async () => {
@@ -779,6 +787,23 @@ const AssessmentQuestionsModal: React.FC<{
       setError(err.response?.data?.error || 'Failed to load questions');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadScoringSystems = async () => {
+    try {
+      const response = await apiService.getScoringSystems();
+      setScoringSystems(response.data || []);
+
+      // Set default scoring system as selected
+      const defaultSystem = response.data?.find((s: any) => s.isDefault);
+      if (defaultSystem) {
+        setSelectedScoringSystem(defaultSystem);
+      } else if (response.data && response.data.length > 0) {
+        setSelectedScoringSystem(response.data[0]);
+      }
+    } catch (err: any) {
+      console.error('Failed to load scoring systems:', err);
     }
   };
 
@@ -1027,6 +1052,30 @@ const AssessmentQuestionsModal: React.FC<{
                 )}
               </div>
               <div className="space-y-4">
+                <div>
+                  <label className="label">Scoring System</label>
+                  <select
+                    value={selectedScoringSystem?.id || ''}
+                    onChange={(e) => {
+                      const system = scoringSystems.find((s) => s.id === e.target.value);
+                      setSelectedScoringSystem(system);
+                    }}
+                    className="input"
+                    disabled={isGenerating}
+                  >
+                    {scoringSystems.map((system) => (
+                      <option key={system.id} value={system.id}>
+                        {system.name}
+                        {system.isDefault ? ' (Default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedScoringSystem && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      {selectedScoringSystem.description}
+                    </p>
+                  )}
+                </div>
                 <div>
                   <label className="label">Number of Questions to Generate</label>
                   <input

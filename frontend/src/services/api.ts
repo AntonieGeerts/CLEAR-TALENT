@@ -149,6 +149,63 @@ class ApiService {
     return response.data;
   }
 
+  // Scoring Systems
+  async getScoringSystems() {
+    const response = await this.api.get('/scoring-systems');
+    return response.data;
+  }
+
+  async getScoringSystem(id: string) {
+    const response = await this.api.get(`/scoring-systems/${id}`);
+    return response.data;
+  }
+
+  async getDefaultScoringSystem() {
+    const response = await this.api.get('/scoring-systems/default');
+    return response.data;
+  }
+
+  async createScoringSystem(data: {
+    systemId: string;
+    name: string;
+    description: string;
+    config: any;
+  }) {
+    const response = await this.api.post('/scoring-systems', data);
+    return response.data;
+  }
+
+  async updateScoringSystem(id: string, data: {
+    name?: string;
+    description?: string;
+    config?: any;
+    isActive?: boolean;
+  }) {
+    const response = await this.api.put(`/scoring-systems/${id}`, data);
+    return response.data;
+  }
+
+  async setDefaultScoringSystem(id: string) {
+    const response = await this.api.post(`/scoring-systems/${id}/set-default`);
+    return response.data;
+  }
+
+  async deleteScoringSystem(id: string) {
+    const response = await this.api.delete(`/scoring-systems/${id}`);
+    return response.data;
+  }
+
+  async calculateScore(systemId: string, questionScores: Array<{
+    questionId: string;
+    score: number;
+    weight?: number;
+  }>) {
+    const response = await this.api.post(`/scoring-systems/${systemId}/calculate`, {
+      questionScores
+    });
+    return response.data;
+  }
+
   // Role Profiles
   async getRoleProfiles() {
     const response = await this.api.get('/role-profiles');

@@ -40,6 +40,7 @@ model Tenant {
   jobDescriptions      JobDescription[]
   organizationalGoals  OrganizationalGoal[]
   performanceImprovementPlans PerformanceImprovementPlan[]
+  scoringSystems       ScoringSystem[]
 
   @@map("tenants")
 }
@@ -138,20 +139,51 @@ enum QuestionType {
 }
 
 model CompetencyQuestion {
-  id            String       @id @default(uuid())
-  competencyId  String       @map("competency_id")
-  statement     String       @db.Text
-  type          QuestionType
-  examples      String[]     @default([])
-  aiGenerated   Boolean      @default(false) @map("ai_generated")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  id               String        @id @default(uuid())
+  competencyId     String        @map("competency_id")
+  statement        String        @db.Text
+  type             QuestionType
+  examples         String[]      @default([])
+  aiGenerated      Boolean       @default(false) @map("ai_generated")
+
+  // Scoring system support
+  scoringSystemId  String?       @map("scoring_system_id")
+  weight           Float?        @default(1.0) // Question weight within competency
+  scoreMin         Int?          @map("score_min") // Minimum score for this question
+  scoreMax         Int?          @map("score_max") // Maximum score for this question
+  behavioralAnchors Json?        @map("behavioral_anchors") // For BARS: { "1": "description", "2": "description", ... }
+
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  competency     Competency     @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  scoringSystem  ScoringSystem? @relation(fields: [scoringSystemId], references: [id], onDelete: SetNull)
 
   @@index([competencyId])
+  @@index([scoringSystemId])
   @@map("competency_questions")
+}
+
+model ScoringSystem {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  systemId    String   @map("system_id") // 'weighted_likert', 'bars', etc.
+  name        String
+  description String   @db.Text
+  config      Json     // Store the full scoring system configuration
+  isActive    Boolean  @default(true) @map("is_active")
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  questions CompetencyQuestion[]
+
+  @@unique([tenantId, systemId])
+  @@index([tenantId])
+  @@map("scoring_systems")
 }
 
 model ProficiencyLevel {
