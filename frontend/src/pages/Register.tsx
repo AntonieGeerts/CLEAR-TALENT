@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/Logo';
 import { branding } from '../config/branding';
-import { UserPlus } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');

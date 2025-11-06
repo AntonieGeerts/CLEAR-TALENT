@@ -101,7 +101,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome back, {user?.firstName || user?.name || 'User'}!
+              Welcome back, {user?.name || 'User'}!
             </h1>
             <p className="text-gray-600 mt-2">
               {tenant?.name} - Performance Management Dashboard

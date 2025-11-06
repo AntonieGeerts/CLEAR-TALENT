@@ -261,7 +261,7 @@ const CreateCompetencyModal: React.FC<{ onClose: () => void; onSuccess: () => vo
 
           <div>
             <label className="label">Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="input">
+            <select value={type} onChange={(e) => setType(e.target.value as any)} className="input">
               <option value="TECHNICAL">Technical</option>
               <option value="BEHAVIORAL">Behavioral</option>
               <option value="LEADERSHIP">Leadership</option>
@@ -363,7 +363,7 @@ const EditCompetencyModal: React.FC<{
 
           <div>
             <label className="label">Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="input">
+            <select value={type} onChange={(e) => setType(e.target.value as any)} className="input">
               <option value="TECHNICAL">Technical</option>
               <option value="BEHAVIORAL">Behavioral</option>
               <option value="LEADERSHIP">Leadership</option>

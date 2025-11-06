@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Users, Settings, Plus, Edit2, Trash2,
-  Key, Mail, User, Shield, Building2, Clock,
+  ArrowLeft, Users, Plus, Edit2, Trash2,
+  Key, Shield, Building2, Clock,
   Search, Filter, Activity
 } from 'lucide-react';
 import { apiService } from '../services/api';

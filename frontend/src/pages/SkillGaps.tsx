@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { apiService } from '../services/api';
-import { TrendingUp, Sparkles, Loader, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { TrendingUp, Sparkles, Loader } from 'lucide-react';
 
 interface SkillGap {
   competency: string;
@@ -13,9 +12,7 @@ interface SkillGap {
 
 export const SkillGaps: React.FC = () => {
   const [showAnalyzeModal, setShowAnalyzeModal] = useState(false);
-  const [gaps, setGaps] = useState<SkillGap[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState('');
+  const [gaps] = useState<SkillGap[]>([]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

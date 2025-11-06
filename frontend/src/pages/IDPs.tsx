@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { GraduationCap, Sparkles, Plus, Edit, Trash2, Loader, CheckCircle } from 'lucide-react';
+import { GraduationCap, Sparkles, Plus, Trash2, Loader, CheckCircle } from 'lucide-react';
 
 interface IDP {
   id: string;
