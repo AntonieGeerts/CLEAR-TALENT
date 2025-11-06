@@ -104,7 +104,7 @@ export class AIOrganizationalGoalService {
     generatedGoals: GeneratedGoal[]
   ) {
     try {
-      const createdGoals = [];
+      const createdGoals: any[] = [];
 
       for (const goalData of generatedGoals) {
         // Store KPIs and BSC perspective in metadata
@@ -112,7 +112,7 @@ export class AIOrganizationalGoalService {
           bscPerspective: goalData.bscPerspective,
           kpis: goalData.kpis,
           aiGenerated: true,
-        };
+        } as any;
 
         const goal = await prisma.organizationalGoal.create({
           data: {
