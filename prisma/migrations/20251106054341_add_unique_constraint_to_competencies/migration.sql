@@ -22,43 +22,44 @@ BEGIN
     LIMIT 1;
 
     -- Update and delete each duplicate
-    FOR del_id IN
+    FOR del_id IN (
       SELECT id
       FROM competencies
       WHERE name = dup.name
         AND tenant_id = dup.tenant_id
         AND id != keep_id
+    )
     LOOP
       -- Safely handle foreign key references
       BEGIN
         -- Update role_competencies to point to the kept competency
         UPDATE role_competencies
         SET competency_id = keep_id
-        WHERE competency_id = del_id;
+        WHERE competency_id = del_id.id;
 
         -- Update skill_profiles
         UPDATE skill_profiles
         SET competency_id = keep_id
-        WHERE competency_id = del_id;
+        WHERE competency_id = del_id.id;
 
         -- Update embedding_vectors
         UPDATE embedding_vectors
         SET entity_id = keep_id::text
-        WHERE entity_type = 'COMPETENCY' AND entity_id = del_id::text;
+        WHERE entity_type = 'COMPETENCY' AND entity_id = del_id.id::text;
 
       EXCEPTION WHEN OTHERS THEN
         -- Log error but continue (tables might not exist in all environments)
-        RAISE NOTICE 'Could not update references for %: %', del_id, SQLERRM;
+        RAISE NOTICE 'Could not update references for %: %', del_id.id, SQLERRM;
       END;
 
       -- Delete child records (cascade should handle this, but being explicit)
-      DELETE FROM proficiency_levels WHERE competency_id = del_id;
-      DELETE FROM behavioral_indicators WHERE competency_id = del_id;
+      DELETE FROM proficiency_levels WHERE competency_id = del_id.id;
+      DELETE FROM behavioral_indicators WHERE competency_id = del_id.id;
 
       -- Delete the duplicate competency
-      DELETE FROM competencies WHERE id = del_id;
+      DELETE FROM competencies WHERE id = del_id.id;
 
-      RAISE NOTICE 'Removed duplicate competency % (kept %)', del_id, keep_id;
+      RAISE NOTICE 'Removed duplicate competency % (kept %)', del_id.id, keep_id;
     END LOOP;
   END LOOP;
 END $$;
