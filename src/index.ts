@@ -58,6 +58,70 @@ async function initializeDatabase() {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
 
+    // Fix failed migrations and ensure enum values exist
+    try {
+      logger.info('🔍 Checking for migration issues...');
+
+      // Delete any failed migration records that are blocking new migrations
+      const deletedCount = await prisma.$executeRawUnsafe(`
+        DELETE FROM "_prisma_migrations"
+        WHERE migration_name = '20251106054341_add_unique_constraint_to_competencies'
+        AND finished_at IS NULL;
+      `);
+
+      if (deletedCount > 0) {
+        logger.info(`✅ Removed ${deletedCount} failed migration record(s)`);
+      }
+
+      // Ensure all CompetencyType enum values exist
+      logger.info('📝 Ensuring CompetencyType enum values...');
+
+      await prisma.$executeRawUnsafe(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'CORE' AND enumtypid = 'CompetencyType'::regtype) THEN
+            ALTER TYPE "CompetencyType" ADD VALUE 'CORE';
+          END IF;
+        END $$;
+      `);
+      logger.info('✅ CORE value ensured');
+
+      await prisma.$executeRawUnsafe(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'LEADERSHIP' AND enumtypid = 'CompetencyType'::regtype) THEN
+            ALTER TYPE "CompetencyType" ADD VALUE 'LEADERSHIP';
+          END IF;
+        END $$;
+      `);
+      logger.info('✅ LEADERSHIP value ensured');
+
+      await prisma.$executeRawUnsafe(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'FUNCTIONAL' AND enumtypid = 'CompetencyType'::regtype) THEN
+            ALTER TYPE "CompetencyType" ADD VALUE 'FUNCTIONAL';
+          END IF;
+        END $$;
+      `);
+      logger.info('✅ FUNCTIONAL value ensured');
+
+      await prisma.$executeRawUnsafe(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'TECHNICAL' AND enumtypid = 'CompetencyType'::regtype) THEN
+            ALTER TYPE "CompetencyType" ADD VALUE 'TECHNICAL';
+          END IF;
+        END $$;
+      `);
+      logger.info('✅ TECHNICAL value ensured');
+
+      logger.info('✅ Migration fixes applied successfully');
+    } catch (migrationError: any) {
+      logger.warn(`⚠️  Migration fix warning: ${migrationError.message}`);
+      // Don't fail startup if migration fix fails - let the app try to start anyway
+    }
+
     const userCount = await prisma.user.count();
     if (userCount === 0) {
       logger.info('🌱 No users found - initializing database...');
