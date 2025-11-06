@@ -8,6 +8,37 @@ CLEAR-TALENT is an enterprise HR platform with AI-powered performance management
 
 **Current State**: Stage 2 complete (AI-Assisted Workflows). Features include AI competency library builder, role-based templates, goal/OKR generation, skill-gap detection, IDPs, sentiment analysis, and learning path suggestions.
 
+## Branch Strategy
+
+**IMPORTANT**: Always work on the feature branch, never commit directly to `main`.
+
+### Active Development Branch
+```bash
+# Current feature branch (use this for all development)
+claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK
+```
+
+### Branch Rules
+1. **ALWAYS** check which branch you're on before committing: `git branch --show-current`
+2. **NEVER** commit directly to `main` branch
+3. All development work goes on the `claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK` branch
+4. Only merge to `main` when explicitly requested by the user
+5. After making changes, always verify you're on the correct branch before pushing
+
+### Switching to Feature Branch
+```bash
+# If you're on main, immediately switch to the feature branch
+git checkout claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK
+
+# Verify you're on the correct branch
+git branch --show-current
+# Should output: claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK
+```
+
+### Deployment
+- **Feature Branch**: Not automatically deployed, safe for development
+- **Main Branch**: Auto-deploys to production (Railway + Vercel)
+
 ## Development Commands
 
 ### Essential Commands
@@ -322,13 +353,34 @@ npm run build           # Rebuild TypeScript
 
 ## Development Workflow
 
-1. **Feature Branch**: `git checkout -b feature/my-feature`
+**CRITICAL**: Always verify you're on the feature branch before starting work!
+
+```bash
+# Step 0: Verify branch (MUST DO FIRST)
+git branch --show-current
+# If not on claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK, switch immediately:
+git checkout claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK
+```
+
+1. **Work on Feature Branch**: All work happens on `claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK`
 2. **Database Changes**: Update schema → migrate → generate client
 3. **Implementation**: Service layer → Controller → Route registration
 4. **Testing**: Write tests → run `npm test`
 5. **Code Quality**: `npm run lint:fix && npm run format`
-6. **Commit**: Descriptive commit messages
-7. **Push**: `git push origin feature/my-feature`
+6. **Verify Branch Again**: `git branch --show-current` (double-check before commit!)
+7. **Commit**: Descriptive commit messages
+8. **Push**: `git push origin claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK`
+
+### If You Accidentally Commit to Main
+```bash
+# Don't panic! Move commits to feature branch:
+git checkout claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK
+git merge main --no-edit
+git checkout main
+git reset --hard origin/main  # Reset to last known good state
+git push origin main --force
+git push origin claude/pmds-ai-integration-spec-011CUpBsf5uHdFbpouYDsSWK
+```
 
 ## Important Files
 
