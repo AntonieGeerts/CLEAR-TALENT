@@ -9,6 +9,10 @@ import { globalRateLimiter } from './middleware/rate-limit';
 
 const app = express();
 
+// Trust proxy - required for Railway/Heroku and other reverse proxies
+// This enables proper IP detection for rate limiting
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 app.use(cors(config.cors));
