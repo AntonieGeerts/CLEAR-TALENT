@@ -527,6 +527,7 @@ export class OrganizationalGoalsController {
 
   /**
    * Generate KPIs for a specific goal using AI
+   * AUTOMATICALLY SAVES the generated KPIs to the goal's metadata
    */
   static async generateKPIsForGoal(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
@@ -539,6 +540,15 @@ export class OrganizationalGoalsController {
     }
 
     try {
+      // Verify goal exists and belongs to tenant
+      const existingGoal = await prisma.organizationalGoal.findFirst({
+        where: { id: goalId, tenantId },
+      });
+
+      if (!existingGoal) {
+        throw new NotFoundError('Goal not found');
+      }
+
       // Generate KPIs using AI
       const kpis = await AIOrganizationalGoalService.generateKPIsForGoal(
         tenantId,
@@ -551,10 +561,46 @@ export class OrganizationalGoalsController {
         }
       );
 
+      // Get existing metadata or create new
+      const existingMetadata = (existingGoal.metadata as any) || {};
+
+      // AUTOMATICALLY SAVE KPIs to the goal's metadata
+      const updatedGoal = await prisma.organizationalGoal.update({
+        where: { id: goalId },
+        data: {
+          metadata: {
+            ...existingMetadata,
+            kpis,
+            kpisGeneratedAt: new Date().toISOString(),
+            kpisGeneratedBy: userId,
+          } as any,
+          updatedAt: new Date(),
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          children: {
+            select: {
+              id: true,
+              title: true,
+              level: true,
+            },
+          },
+        },
+      });
+
       res.status(200).json({
         success: true,
-        data: { kpis },
-        message: 'KPIs generated successfully',
+        data: {
+          kpis,
+          goal: updatedGoal,
+        },
+        message: 'KPIs generated and saved successfully',
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

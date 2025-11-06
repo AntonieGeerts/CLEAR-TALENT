@@ -8,6 +8,7 @@ import setupRoutes from './setup-routes';
 import tenantRoutes from './tenant-routes';
 import userRoutes from './user-routes';
 import organizationalGoalsRoutes from './organizational-goals-routes';
+import goalsRoutes from './goals-routes';
 import pipRoutes from './pip-routes';
 import adminRoutes from './admin-routes';
 import { authenticate } from '../middleware/auth';
@@ -36,6 +37,7 @@ router.use('/roles', authenticate, roleRoutes);
 router.use('/ai', authenticate, aiRoutes);
 router.use('/workflows', authenticate, workflowRoutes);
 router.use('/organizational-goals', authenticate, organizationalGoalsRoutes);
+router.use('/goals', authenticate, goalsRoutes);
 router.use('/pips', authenticate, pipRoutes);
 
 // System Admin routes
