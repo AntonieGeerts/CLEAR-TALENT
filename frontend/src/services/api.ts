@@ -142,15 +142,46 @@ class ApiService {
 
   async generateGoals(data: {
     employeeId: string;
+    roleContext?: string;
     roleProfileId?: string;
   }) {
     const response = await this.api.post('/ai/generate-goals', data);
     return response.data;
   }
 
+  async createGoal(data: {
+    title: string;
+    description?: string;
+    type: string;
+    status: string;
+    progress: number;
+    targetDate?: string;
+  }) {
+    const response = await this.api.post('/goals', data);
+    return response.data;
+  }
+
+  async updateGoal(id: string, data: {
+    title?: string;
+    description?: string;
+    type?: string;
+    status?: string;
+    progress?: number;
+    targetDate?: string;
+  }) {
+    const response = await this.api.put(`/goals/${id}`, data);
+    return response.data;
+  }
+
+  async deleteGoal(id: string) {
+    const response = await this.api.delete(`/goals/${id}`);
+    return response.data;
+  }
+
   // Skill Gaps
   async analyzeSkillGaps(data: {
     employeeId: string;
+    context?: string;
     roleProfileId?: string;
   }) {
     const response = await this.api.post('/ai/analyze-skill-gaps', data);
@@ -166,10 +197,25 @@ class ApiService {
 
   async generateIDP(data: {
     employeeId: string;
-    skillGaps: any[];
+    context?: string;
+    skillGaps?: any[];
     goals?: any[];
   }) {
     const response = await this.api.post('/ai/generate-idp', data);
+    return response.data;
+  }
+
+  async createIDP(data: {
+    title: string;
+    startDate: string;
+    targetDate?: string;
+  }) {
+    const response = await this.api.post('/idps', data);
+    return response.data;
+  }
+
+  async deleteIDP(id: string) {
+    const response = await this.api.delete(`/idps/${id}`);
     return response.data;
   }
 
