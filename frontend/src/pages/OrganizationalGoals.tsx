@@ -425,6 +425,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
   const [organizationDescription, setOrganizationDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedGoals, setGeneratedGoals] = useState<any[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<boolean[]>([]);
   const [error, setError] = useState('');
   const [step, setStep] = useState<'input' | 'review'>('input');
 
@@ -440,7 +441,10 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
         organizationDescription,
       });
 
-      setGeneratedGoals(result.goals || []);
+      const goals = result.goals || [];
+      setGeneratedGoals(goals);
+      // Initialize all goals as selected by default
+      setSelectedGoals(new Array(goals.length).fill(true));
       setStep('review');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to generate goals. Please try again.');
@@ -454,7 +458,16 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
     setError('');
 
     try {
-      await apiService.createGoalsFromAI({ goals: generatedGoals });
+      // Filter to only include selected goals
+      const goalsToCreate = generatedGoals.filter((_, index) => selectedGoals[index]);
+
+      if (goalsToCreate.length === 0) {
+        setError('Please select at least one goal to create.');
+        setLoading(false);
+        return;
+      }
+
+      await apiService.createGoalsFromAI({ goals: goalsToCreate });
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create goals. Please try again.');
@@ -462,6 +475,19 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
       setLoading(false);
     }
   };
+
+  const toggleGoalSelection = (index: number) => {
+    const newSelected = [...selectedGoals];
+    newSelected[index] = !newSelected[index];
+    setSelectedGoals(newSelected);
+  };
+
+  const toggleAllGoals = () => {
+    const allSelected = selectedGoals.every(selected => selected);
+    setSelectedGoals(new Array(generatedGoals.length).fill(!allSelected));
+  };
+
+  const selectedCount = selectedGoals.filter(selected => selected).length;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -575,59 +601,96 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
           ) : (
             /* Review Step */
             <div className="space-y-4">
+              {/* Select All / Deselect All */}
+              <div className="flex items-center justify-between pb-3 border-b">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedCount === generatedGoals.length}
+                    onChange={toggleAllGoals}
+                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {selectedCount === generatedGoals.length ? 'Deselect All' : 'Select All'}
+                  </span>
+                </label>
+                <span className="text-sm text-gray-600">
+                  {selectedCount} of {generatedGoals.length} goal{generatedGoals.length !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+
               <div className="grid gap-4">
                 {generatedGoals.map((goal, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
+                  <div
+                    key={index}
+                    className={`border rounded-lg p-4 transition-all ${
+                      selectedGoals[index]
+                        ? 'border-primary-300 bg-primary-50'
+                        : 'border-gray-200 bg-white opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedGoals[index]}
+                        onChange={() => toggleGoalSelection(index)}
+                        className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mt-1 cursor-pointer"
+                      />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-gray-900">{goal.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
-                      </div>
-                      <span className="ml-4 px-3 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
-                        {goal.bscPerspective?.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 text-sm mb-3">
-                      {goal.department && (
-                        <div>
-                          <span className="text-gray-500">Department:</span>
-                          <span className="ml-1 font-medium">{goal.department}</span>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-gray-900">{goal.title}</h3>
+                            <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
+                          </div>
+                          <span className="ml-4 px-3 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
+                            {goal.bscPerspective?.replace('_', ' ')}
+                          </span>
                         </div>
-                      )}
-                      <div>
-                        <span className="text-gray-500">Weight:</span>
-                        <span className="ml-1 font-medium">{goal.weight}%</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Target Date:</span>
-                        <span className="ml-1 font-medium">
-                          {new Date(goal.targetDate).toLocaleDateString()}
-                        </span>
                       </div>
                     </div>
 
-                    {/* KPIs */}
-                    {goal.kpis && goal.kpis.length > 0 && (
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Key Performance Indicators:</h4>
-                        <div className="space-y-2">
-                          {goal.kpis.map((kpi: any, kpiIndex: number) => (
-                            <div key={kpiIndex} className="flex items-start text-sm">
-                              <span className="text-primary-600 mr-2">•</span>
-                              <div className="flex-1">
-                                <span className="font-medium">{kpi.name}:</span>
-                                <span className="ml-1 text-gray-600">{kpi.description}</span>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Target: <span className="font-medium">{kpi.target}{kpi.unit}</span> | 
-                                  Measured: <span className="font-medium">{kpi.frequency}</span>
+                    <div className="ml-8">
+                      <div className="grid grid-cols-3 gap-3 text-sm mb-3">
+                        {goal.department && (
+                          <div>
+                            <span className="text-gray-500">Department:</span>
+                            <span className="ml-1 font-medium">{goal.department}</span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-gray-500">Weight:</span>
+                          <span className="ml-1 font-medium">{goal.weight}%</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Target Date:</span>
+                          <span className="ml-1 font-medium">
+                            {new Date(goal.targetDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* KPIs */}
+                      {goal.kpis && goal.kpis.length > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Key Performance Indicators:</h4>
+                          <div className="space-y-2">
+                            {goal.kpis.map((kpi: any, kpiIndex: number) => (
+                              <div key={kpiIndex} className="flex items-start text-sm">
+                                <span className="text-primary-600 mr-2">•</span>
+                                <div className="flex-1">
+                                  <span className="font-medium">{kpi.name}:</span>
+                                  <span className="ml-1 text-gray-600">{kpi.description}</span>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Target: <span className="font-medium">{kpi.target}{kpi.unit}</span> |
+                                    Measured: <span className="font-medium">{kpi.frequency}</span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -657,9 +720,9 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({ onClose, onSucces
                     type="button"
                     onClick={handleCreateGoals}
                     className="btn btn-primary"
-                    disabled={loading}
+                    disabled={loading || selectedCount === 0}
                   >
-                    {loading ? 'Creating...' : `Create ${generatedGoals.length} Goals`}
+                    {loading ? 'Creating...' : `Create ${selectedCount} Goal${selectedCount !== 1 ? 's' : ''}`}
                   </button>
                 </div>
               </div>
