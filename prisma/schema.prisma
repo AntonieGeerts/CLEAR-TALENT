@@ -121,12 +121,37 @@ model Competency {
   roleCompetencies      RoleCompetency[]
   embeddingVectors      EmbeddingVector[]
   skillProfiles         SkillProfile[]
+  questions             CompetencyQuestion[]
 
   @@unique([name, tenantId], map: "unique_competency_per_tenant")
   @@index([tenantId])
   @@index([type])
   @@index([category])
   @@map("competencies")
+}
+
+enum QuestionType {
+  BEHAVIORAL
+  SITUATIONAL
+  TECHNICAL
+  KNOWLEDGE
+}
+
+model CompetencyQuestion {
+  id            String       @id @default(uuid())
+  competencyId  String       @map("competency_id")
+  statement     String       @db.Text
+  type          QuestionType
+  examples      String[]     @default([])
+  aiGenerated   Boolean      @default(false) @map("ai_generated")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@index([competencyId])
+  @@map("competency_questions")
 }
 
 model ProficiencyLevel {

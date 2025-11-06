@@ -8,7 +8,6 @@ export const Competencies: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showAIModal, setShowAIModal] = useState(false);
   const [showGenerateByCategoryModal, setShowGenerateByCategoryModal] = useState(false);
   const [showAssessmentQuestionsModal, setShowAssessmentQuestionsModal] = useState(false);
   const [selectedCompetency, setSelectedCompetency] = useState<Competency | null>(null);
@@ -61,13 +60,6 @@ export const Competencies: React.FC = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={() => setShowAIModal(true)}
-            className="btn btn-secondary flex items-center space-x-2"
-          >
-            <Sparkles size={20} />
-            <span>AI Suggest from JD</span>
-          </button>
-          <button
             onClick={() => setShowGenerateByCategoryModal(true)}
             className="btn btn-secondary flex items-center space-x-2"
           >
@@ -102,15 +94,15 @@ export const Competencies: React.FC = () => {
           <BookOpen className="mx-auto text-gray-400 mb-4" size={48} />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No competencies yet</h3>
           <p className="text-gray-600 mb-6">
-            Get started by creating a competency manually or using AI to suggest from a job description.
+            Get started by generating competencies by category using AI or creating them manually.
           </p>
           <div className="flex justify-center space-x-3">
             <button
-              onClick={() => setShowAIModal(true)}
+              onClick={() => setShowGenerateByCategoryModal(true)}
               className="btn btn-secondary flex items-center space-x-2"
             >
               <Sparkles size={20} />
-              <span>AI Suggest</span>
+              <span>Generate by Category</span>
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
@@ -197,17 +189,6 @@ export const Competencies: React.FC = () => {
           onSuccess={() => {
             setShowEditModal(false);
             setSelectedCompetency(null);
-            loadCompetencies();
-          }}
-        />
-      )}
-
-      {/* AI Suggest Modal */}
-      {showAIModal && (
-        <AISuggestModal
-          onClose={() => setShowAIModal(false)}
-          onSuccess={() => {
-            setShowAIModal(false);
             loadCompetencies();
           }}
         />
@@ -436,140 +417,6 @@ const EditCompetencyModal: React.FC<{
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  );
-};
-
-// AI Suggest Modal Component
-const AISuggestModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({
-  onClose,
-  onSuccess,
-}) => {
-  const [jobDescription, setJobDescription] = useState('');
-  const [roleTitle, setRoleTitle] = useState('');
-  const [department, setDepartment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      const response = await apiService.suggestCompetenciesFromJD({
-        jobDescription,
-        roleTitle,
-        department,
-      });
-      setSuggestions(response.data?.competencies || []);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to generate suggestions');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center space-x-3 mb-6">
-          <Sparkles className="text-primary-600" size={28} />
-          <h2 className="text-2xl font-bold text-gray-900">AI Competency Suggestions</h2>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-          <div>
-            <label className="label">Role Title</label>
-            <input
-              type="text"
-              value={roleTitle}
-              onChange={(e) => setRoleTitle(e.target.value)}
-              className="input"
-              placeholder="e.g., Senior Software Engineer"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label">Department</label>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="input"
-              placeholder="e.g., Engineering"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label">Job Description</label>
-            <textarea
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              className="input"
-              rows={8}
-              placeholder="Paste the full job description here..."
-              required
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" disabled={isSubmitting} className="btn btn-primary">
-              {isSubmitting ? (
-                <>
-                  <Loader className="animate-spin mr-2" size={16} />
-                  Generating...
-                </>
-              ) : (
-                'Generate Suggestions'
-              )}
-            </button>
-          </div>
-        </form>
-
-        {suggestions.length > 0 && (
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Suggested Competencies ({suggestions.length})
-            </h3>
-            <div className="space-y-3">
-              {suggestions.map((suggestion, index) => (
-                <div key={index} className="card">
-                  <h4 className="font-semibold text-gray-900">{suggestion.name}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{suggestion.description}</p>
-                  <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                      {suggestion.type}
-                    </span>
-                    {suggestion.category && (
-                      <span className="text-xs px-2 py-1 bg-primary-50 text-primary-700 rounded">
-                        {suggestion.category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button onClick={onSuccess} className="btn btn-primary">
-                Done
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -908,16 +755,40 @@ const AssessmentQuestionsModal: React.FC<{
 }> = ({ competency, onClose }) => {
   const [count, setCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newQuestion, setNewQuestion] = useState({
+    statement: '',
+    type: 'BEHAVIORAL' as 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE',
+    examples: [''],
+  });
+
+  // Load existing questions on mount
+  useEffect(() => {
+    loadQuestions();
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiService.getCompetencyQuestions(competency.id);
+      setQuestions(response.data || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to load questions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGenerate = async () => {
     setError('');
     setIsGenerating(true);
 
     try {
-      const response = await apiService.generateAssessmentQuestions(competency.id, count);
-      setQuestions(response.data || []);
+      await apiService.generateAssessmentQuestions(competency.id, count, true);
+      await loadQuestions(); // Reload to show saved questions
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to generate assessment questions');
     } finally {
@@ -925,12 +796,48 @@ const AssessmentQuestionsModal: React.FC<{
     }
   };
 
+  const handleAddQuestion = async () => {
+    if (!newQuestion.statement.trim()) {
+      setError('Question statement is required');
+      return;
+    }
+
+    try {
+      await apiService.createCompetencyQuestion(competency.id, {
+        statement: newQuestion.statement,
+        type: newQuestion.type,
+        examples: newQuestion.examples.filter((ex) => ex.trim()),
+      });
+      setNewQuestion({ statement: '', type: 'BEHAVIORAL', examples: [''] });
+      setShowAddForm(false);
+      await loadQuestions();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to add question');
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm('Are you sure you want to delete this question?')) return;
+
+    try {
+      await apiService.deleteCompetencyQuestion(questionId);
+      await loadQuestions();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete question');
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center space-x-3 mb-6">
-          <Sparkles className="text-primary-600" size={28} />
-          <h2 className="text-2xl font-bold text-gray-900">Assessment Questions</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <Sparkles className="text-primary-600" size={28} />
+            <h2 className="text-2xl font-bold text-gray-900">Assessment Questions</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
         </div>
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
@@ -952,86 +859,212 @@ const AssessmentQuestionsModal: React.FC<{
           </div>
         )}
 
-        <div className="space-y-4 mb-6">
-          <div>
-            <label className="label">Number of Questions</label>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={count}
-              onChange={(e) => setCount(parseInt(e.target.value) || 5)}
-              className="input"
-              disabled={isGenerating}
-            />
+        {/* Existing Questions */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="animate-spin text-primary-600" size={32} />
           </div>
-
-          {questions.length === 0 && (
-            <div className="flex justify-end space-x-3">
-              <button type="button" onClick={onClose} className="btn btn-secondary">
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="btn btn-primary"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader className="animate-spin mr-2" size={16} />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Questions'
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {questions.length > 0 && (
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Generated Assessment Questions ({questions.length})
-            </h3>
-
-            <div className="space-y-4 mb-6">
-              {questions.map((q, index) => (
-                <div key={index} className="card">
-                  <div className="flex items-start space-x-3">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-sm">
-                      {index + 1}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-gray-900 mb-2">{q.statement}</p>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
-                          {q.type}
-                        </span>
-                      </div>
-                      {q.examples && q.examples.length > 0 && (
-                        <div className="mt-3 pl-3 border-l-2 border-gray-200">
-                          <p className="text-xs font-semibold text-gray-700 mb-1">Examples:</p>
-                          <ul className="text-xs text-gray-600 space-y-1">
-                            {q.examples.map((ex: string, i: number) => (
-                              <li key={i}>• {ex}</li>
-                            ))}
-                          </ul>
+        ) : (
+          <>
+            {questions.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Existing Questions ({questions.length})
+                </h3>
+                <div className="space-y-3">
+                  {questions.map((q, index) => (
+                    <div key={q.id} className="card">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-sm">
+                            {index + 1}
+                          </span>
+                          <div className="flex-1">
+                            <p className="text-gray-900 mb-2">{q.statement}</p>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
+                                {q.type.toLowerCase()}
+                              </span>
+                              {q.aiGenerated && (
+                                <span className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded flex items-center">
+                                  <Sparkles size={12} className="mr-1" />
+                                  AI
+                                </span>
+                              )}
+                            </div>
+                            {q.examples && q.examples.length > 0 && (
+                              <div className="mt-3 pl-3 border-l-2 border-gray-200">
+                                <p className="text-xs font-semibold text-gray-700 mb-1">
+                                  Examples:
+                                </p>
+                                <ul className="text-xs text-gray-600 space-y-1">
+                                  {q.examples.map((ex: string, i: number) => (
+                                    <li key={i}>• {ex}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
+                        <button
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          className="ml-2 text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add Question Form */}
+            {showAddForm && (
+              <div className="border border-gray-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Add New Question</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="label">Question Statement</label>
+                    <textarea
+                      value={newQuestion.statement}
+                      onChange={(e) =>
+                        setNewQuestion({ ...newQuestion, statement: e.target.value })
+                      }
+                      className="input"
+                      rows={3}
+                      placeholder="Enter the assessment question..."
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Question Type</label>
+                    <select
+                      value={newQuestion.type}
+                      onChange={(e) =>
+                        setNewQuestion({
+                          ...newQuestion,
+                          type: e.target.value as any,
+                        })
+                      }
+                      className="input"
+                    >
+                      <option value="BEHAVIORAL">Behavioral</option>
+                      <option value="SITUATIONAL">Situational</option>
+                      <option value="TECHNICAL">Technical</option>
+                      <option value="KNOWLEDGE">Knowledge</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Examples (Optional)</label>
+                    {newQuestion.examples.map((ex, i) => (
+                      <div key={i} className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="text"
+                          value={ex}
+                          onChange={(e) => {
+                            const updated = [...newQuestion.examples];
+                            updated[i] = e.target.value;
+                            setNewQuestion({ ...newQuestion, examples: updated });
+                          }}
+                          className="input flex-1"
+                          placeholder="Example answer or scenario..."
+                        />
+                        {i > 0 && (
+                          <button
+                            onClick={() => {
+                              const updated = newQuestion.examples.filter((_, idx) => idx !== i);
+                              setNewQuestion({ ...newQuestion, examples: updated });
+                            }}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() =>
+                        setNewQuestion({
+                          ...newQuestion,
+                          examples: [...newQuestion.examples, ''],
+                        })
+                      }
+                      className="text-sm text-primary-600 hover:text-primary-800"
+                    >
+                      + Add Example
+                    </button>
+                  </div>
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setNewQuestion({ statement: '', type: 'BEHAVIORAL', examples: [''] });
+                      }}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button onClick={handleAddQuestion} className="btn btn-primary">
+                      Add Question
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
-            <div className="flex justify-end">
-              <button onClick={onClose} className="btn btn-primary">
-                Done
-              </button>
+            {/* AI Generate Section */}
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">AI Generation</h3>
+                {!showAddForm && (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="btn btn-secondary text-sm"
+                  >
+                    <Plus size={16} className="inline mr-1" />
+                    Add Manual Question
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Number of Questions to Generate</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={count}
+                    onChange={(e) => setCount(parseInt(e.target.value) || 5)}
+                    className="input"
+                    disabled={isGenerating}
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button type="button" onClick={onClose} className="btn btn-secondary">
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                    className="btn btn-primary"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader className="animate-spin mr-2" size={16} />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} className="inline mr-1" />
+                        Generate with AI
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

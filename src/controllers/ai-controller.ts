@@ -117,7 +117,7 @@ export class AIController {
    */
   static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
     const { id } = req.params;
-    const { count = 5 } = req.body;
+    const { count = 5, autoSave = true } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
 
@@ -128,12 +128,45 @@ export class AIController {
       count
     );
 
+    // Auto-save questions to database if requested
+    let savedQuestions = questions;
+    if (autoSave) {
+      const { CompetencyQuestionService } = await import(
+        '../services/competency/question-service'
+      );
+
+      // Map AI-generated types to QuestionType enum
+      const mappedQuestions = questions.map((q: any) => ({
+        statement: q.statement,
+        type: this.mapQuestionType(q.type),
+        examples: q.examples || [],
+      }));
+
+      savedQuestions = await CompetencyQuestionService.bulkCreateQuestions(id, mappedQuestions);
+    }
+
     res.json({
       success: true,
-      data: questions,
-      message: `${questions.length} assessment questions generated`,
+      data: savedQuestions,
+      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved' : 'generated'}`,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Map AI-generated question types to QuestionType enum
+   */
+  private static mapQuestionType(aiType: string): 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE' {
+    switch (aiType.toLowerCase()) {
+      case 'behavioral':
+        return 'BEHAVIORAL';
+      case 'outcome':
+        return 'SITUATIONAL';
+      case 'frequency':
+        return 'BEHAVIORAL';
+      default:
+        return 'BEHAVIORAL';
+    }
   }
 
   /**

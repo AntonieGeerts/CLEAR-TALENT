@@ -112,11 +112,40 @@ class ApiService {
     return response.data;
   }
 
-  async generateAssessmentQuestions(competencyId: string, count?: number) {
+  async generateAssessmentQuestions(competencyId: string, count?: number, autoSave = true) {
     const response = await this.api.post(
       `/ai/competencies/${competencyId}/generate-assessment-questions`,
-      { count: count || 5 }
+      { count: count || 5, autoSave }
     );
+    return response.data;
+  }
+
+  // Competency Questions
+  async getCompetencyQuestions(competencyId: string) {
+    const response = await this.api.get(`/competencies/${competencyId}/questions`);
+    return response.data;
+  }
+
+  async createCompetencyQuestion(competencyId: string, data: {
+    statement: string;
+    type: 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE';
+    examples?: string[];
+  }) {
+    const response = await this.api.post(`/competencies/${competencyId}/questions`, data);
+    return response.data;
+  }
+
+  async updateCompetencyQuestion(questionId: string, data: {
+    statement?: string;
+    type?: 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE';
+    examples?: string[];
+  }) {
+    const response = await this.api.put(`/competencies/questions/${questionId}`, data);
+    return response.data;
+  }
+
+  async deleteCompetencyQuestion(questionId: string) {
+    const response = await this.api.delete(`/competencies/questions/${questionId}`);
     return response.data;
   }
 
