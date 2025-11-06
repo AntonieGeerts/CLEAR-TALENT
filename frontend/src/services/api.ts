@@ -97,6 +97,22 @@ class ApiService {
     return response.data;
   }
 
+  async generateCompetenciesByCategory(data: {
+    category: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL';
+    count?: number;
+  }) {
+    const response = await this.api.post('/ai/competencies/generate-by-category', data);
+    return response.data;
+  }
+
+  async generateAssessmentQuestions(competencyId: string, count?: number) {
+    const response = await this.api.post(
+      `/ai/competencies/${competencyId}/generate-assessment-questions`,
+      { count: count || 5 }
+    );
+    return response.data;
+  }
+
   // Role Profiles
   async getRoleProfiles() {
     const response = await this.api.get('/role-profiles');

@@ -82,6 +82,60 @@ export class AIController {
   }
 
   /**
+   * Generate competencies by category
+   */
+  static async generateByCategory(req: AuthRequest, res: Response) {
+    const { category, count = 5 } = req.body;
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    if (!['CORE', 'LEADERSHIP', 'FUNCTIONAL'].includes(category)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid category. Must be CORE, LEADERSHIP, or FUNCTIONAL',
+      });
+    }
+
+    const competencies = await AICompetencyService.generateCompetenciesByCategory(
+      tenantId,
+      userId,
+      category,
+      count
+    );
+
+    res.json({
+      success: true,
+      data: competencies,
+      message: `${competencies.length} ${category} competencies generated`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Generate assessment questions for a competency
+   */
+  static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
+    const { id } = req.params;
+    const { count = 5 } = req.body;
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    const questions = await AICompetencyService.generateAssessmentQuestions(
+      id,
+      tenantId,
+      userId,
+      count
+    );
+
+    res.json({
+      success: true,
+      data: questions,
+      message: `${questions.length} assessment questions generated`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
    * Create proficiency levels from AI suggestions
    */
   static async createLevelsFromAI(req: AuthRequest, res: Response) {
