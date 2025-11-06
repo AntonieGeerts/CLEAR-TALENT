@@ -16,13 +16,18 @@ export interface OrchestrationContext {
 }
 
 export class LLMOrchestrator {
-  private provider: AIProvider;
+  private provider: AIProvider | null;
   private static instance: LLMOrchestrator;
 
   private constructor() {
     // Initialize provider based on configuration
-    this.provider = new OpenAIProvider();
-    aiLogger.info('LLM Orchestrator initialized');
+    if (config.ai.enabled && config.openai.apiKey && config.openai.apiKey !== 'sk-test-key-not-configured') {
+      this.provider = new OpenAIProvider();
+      aiLogger.info('LLM Orchestrator initialized with AI enabled');
+    } else {
+      this.provider = null;
+      aiLogger.info('LLM Orchestrator initialized with AI disabled');
+    }
   }
 
   /**
@@ -54,7 +59,7 @@ export class LLMOrchestrator {
 
     try {
       // Check if AI is enabled
-      if (!this.isEnabled()) {
+      if (!this.isEnabled() || !this.provider) {
         throw new AIServiceError('AI features are disabled');
       }
 
@@ -161,7 +166,7 @@ export class LLMOrchestrator {
     context: OrchestrationContext
   ): Promise<number[]> {
     try {
-      if (!this.isEnabled()) {
+      if (!this.isEnabled() || !this.provider) {
         throw new AIServiceError('AI features are disabled');
       }
 
