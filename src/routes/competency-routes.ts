@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { CompetencyController } from '../controllers/competency-controller';
+import { CompetencyQuestionController } from '../controllers/competency-question-controller';
 import { asyncHandler } from '../middleware/error-handler';
 import { validateBody, validateQuery } from '../middleware/validation';
 import { authenticate, requireRole } from '../middleware/auth';
@@ -35,6 +36,27 @@ router.delete(
   '/:id',
   requireRole('ADMIN', 'HR_MANAGER'),
   asyncHandler(CompetencyController.delete)
+);
+
+// Question management routes
+router.get(
+  '/:competencyId/questions',
+  asyncHandler(CompetencyQuestionController.getByCompetency)
+);
+router.post(
+  '/:competencyId/questions',
+  requireRole('ADMIN', 'HR_MANAGER'),
+  asyncHandler(CompetencyQuestionController.create)
+);
+router.put(
+  '/questions/:id',
+  requireRole('ADMIN', 'HR_MANAGER'),
+  asyncHandler(CompetencyQuestionController.update)
+);
+router.delete(
+  '/questions/:id',
+  requireRole('ADMIN', 'HR_MANAGER'),
+  asyncHandler(CompetencyQuestionController.delete)
 );
 
 export default router;

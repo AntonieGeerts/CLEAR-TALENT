@@ -40,6 +40,7 @@ model Tenant {
   jobDescriptions      JobDescription[]
   organizationalGoals  OrganizationalGoal[]
   performanceImprovementPlans PerformanceImprovementPlan[]
+  scoringSystems       ScoringSystem[]
 
   @@map("tenants")
 }
@@ -94,10 +95,10 @@ model User {
 // ============================================================================
 
 enum CompetencyType {
-  TECHNICAL
-  BEHAVIORAL
+  CORE
   LEADERSHIP
   FUNCTIONAL
+  TECHNICAL  // Legacy - to be phased out
 }
 
 model Competency {
@@ -121,12 +122,75 @@ model Competency {
   roleCompetencies      RoleCompetency[]
   embeddingVectors      EmbeddingVector[]
   skillProfiles         SkillProfile[]
+  questions             CompetencyQuestion[]
 
   @@unique([name, tenantId], map: "unique_competency_per_tenant")
   @@index([tenantId])
   @@index([type])
   @@index([category])
   @@map("competencies")
+}
+
+enum QuestionType {
+  BEHAVIORAL
+  SITUATIONAL
+  TECHNICAL
+  KNOWLEDGE
+}
+
+model CompetencyQuestion {
+  id                  String        @id @default(uuid())
+  competencyId        String        @map("competency_id")
+  proficiencyLevelId  String?       @map("proficiency_level_id") // Link to Basic, Proficient, Advanced, Expert
+  statement           String        @db.Text // Behavior indicator
+  type                QuestionType
+  examples            String[]      @default([])
+  aiGenerated         Boolean       @default(false) @map("ai_generated")
+
+  // Scoring system support
+  scoringSystemId  String?       @map("scoring_system_id")
+  weight           Float?        @default(1.0) // Question weight within competency
+  scoreMin         Int?          @map("score_min") // Minimum score for this question
+  scoreMax         Int?          @map("score_max") // Maximum score for this question
+  behavioralAnchors Json?        @map("behavioral_anchors") // For BARS: { "1": "description", "2": "description", ... }
+
+  // 4-option rating scale (stored as JSON for flexibility)
+  // Example: { "1": "Never Demonstrated", "2": "Sometimes Demonstrated", "3": "Consistently Demonstrated", "4": "Consistently + Higher Level" }
+  ratingOptions    Json?         @map("rating_options")
+
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  competency       Competency        @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+  proficiencyLevel ProficiencyLevel? @relation(fields: [proficiencyLevelId], references: [id], onDelete: SetNull)
+  scoringSystem    ScoringSystem?    @relation(fields: [scoringSystemId], references: [id], onDelete: SetNull)
+
+  @@index([competencyId])
+  @@index([proficiencyLevelId])
+  @@index([scoringSystemId])
+  @@map("competency_questions")
+}
+
+model ScoringSystem {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  systemId    String   @map("system_id") // 'weighted_likert', 'bars', etc.
+  name        String
+  description String   @db.Text
+  config      Json     // Store the full scoring system configuration
+  isActive    Boolean  @default(true) @map("is_active")
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  questions CompetencyQuestion[]
+
+  @@unique([tenantId, systemId])
+  @@index([tenantId])
+  @@map("scoring_systems")
 }
 
 model ProficiencyLevel {
@@ -142,6 +206,7 @@ model ProficiencyLevel {
   // Relations
   competency            Competency            @relation(fields: [competencyId], references: [id], onDelete: Cascade)
   behavioralIndicators  BehavioralIndicator[]
+  questions             CompetencyQuestion[]  // Questions for this proficiency level
   roleCompetencies      RoleCompetency[]
   skillProfiles         SkillProfile[]
 

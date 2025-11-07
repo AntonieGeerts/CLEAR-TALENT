@@ -18,7 +18,7 @@ export const registerSchema = z.object({
 // Competency schemas
 export const createCompetencySchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
-  type: z.enum(['TECHNICAL', 'BEHAVIORAL', 'LEADERSHIP', 'FUNCTIONAL']),
+  type: z.enum(['CORE', 'LEADERSHIP', 'FUNCTIONAL', 'TECHNICAL']),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   category: z.string().min(1, 'Category is required'),
   tags: z.array(z.string()).optional().default([]),

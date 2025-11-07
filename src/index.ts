@@ -9,9 +9,10 @@ import { globalRateLimiter } from './middleware/rate-limit';
 
 const app = express();
 
-// Trust proxy - required for Railway/Heroku and other reverse proxies
-// This enables proper IP detection for rate limiting
-app.set('trust proxy', true);
+// Trust proxy - Railway uses a single reverse proxy
+// Trust only the first proxy hop for security (prevents IP spoofing)
+// See: https://expressjs.com/en/guide/behind-proxies.html
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
@@ -56,6 +57,59 @@ async function initializeDatabase() {
   try {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
+
+    // Fix failed migrations and ensure enum values exist
+    try {
+      logger.info('🔍 Checking for migration issues...');
+
+      // Delete any failed migration records that are blocking new migrations
+      const deletedCount = await prisma.$executeRawUnsafe(`
+        DELETE FROM "_prisma_migrations"
+        WHERE migration_name = '20251106054341_add_unique_constraint_to_competencies'
+        AND finished_at IS NULL;
+      `);
+
+      if (deletedCount > 0) {
+        logger.info(`✅ Removed ${deletedCount} failed migration record(s)`);
+      }
+
+      // Ensure all CompetencyType enum values exist
+      logger.info('📝 Ensuring CompetencyType enum values...');
+
+      // Try to add each enum value - PostgreSQL 9.1+ supports IF NOT EXISTS
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'CORE';`);
+        logger.info('✅ CORE value ensured');
+      } catch (e: any) {
+        logger.warn(`CORE value: ${e.message}`);
+      }
+
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'LEADERSHIP';`);
+        logger.info('✅ LEADERSHIP value ensured');
+      } catch (e: any) {
+        logger.warn(`LEADERSHIP value: ${e.message}`);
+      }
+
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'FUNCTIONAL';`);
+        logger.info('✅ FUNCTIONAL value ensured');
+      } catch (e: any) {
+        logger.warn(`FUNCTIONAL value: ${e.message}`);
+      }
+
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "CompetencyType" ADD VALUE IF NOT EXISTS 'TECHNICAL';`);
+        logger.info('✅ TECHNICAL value ensured');
+      } catch (e: any) {
+        logger.warn(`TECHNICAL value: ${e.message}`);
+      }
+
+      logger.info('✅ Migration fixes applied successfully');
+    } catch (migrationError: any) {
+      logger.warn(`⚠️  Migration fix warning: ${migrationError.message}`);
+      // Don't fail startup if migration fix fails - let the app try to start anyway
+    }
 
     const userCount = await prisma.user.count();
     if (userCount === 0) {

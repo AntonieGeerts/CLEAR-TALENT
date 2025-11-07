@@ -97,6 +97,115 @@ class ApiService {
     return response.data;
   }
 
+  async generateCompetenciesByCategory(data: {
+    category: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL';
+    count?: number;
+    companyContext?: {
+      companyName: string;
+      industry: string;
+      companySize?: string;
+      companyValues?: string;
+      companyDescription?: string;
+    };
+  }) {
+    const response = await this.api.post('/ai/competencies/generate-by-category', data);
+    return response.data;
+  }
+
+  async generateAssessmentQuestions(competencyId: string, count?: number, autoSave = true) {
+    const response = await this.api.post(
+      `/ai/competencies/${competencyId}/generate-assessment-questions`,
+      { count: count || 5, autoSave }
+    );
+    return response.data;
+  }
+
+  // Competency Questions
+  async getCompetencyQuestions(competencyId: string) {
+    const response = await this.api.get(`/competencies/${competencyId}/questions`);
+    return response.data;
+  }
+
+  async createCompetencyQuestion(competencyId: string, data: {
+    statement: string;
+    type: 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE';
+    examples?: string[];
+  }) {
+    const response = await this.api.post(`/competencies/${competencyId}/questions`, data);
+    return response.data;
+  }
+
+  async updateCompetencyQuestion(questionId: string, data: {
+    statement?: string;
+    type?: 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE';
+    examples?: string[];
+  }) {
+    const response = await this.api.put(`/competencies/questions/${questionId}`, data);
+    return response.data;
+  }
+
+  async deleteCompetencyQuestion(questionId: string) {
+    const response = await this.api.delete(`/competencies/questions/${questionId}`);
+    return response.data;
+  }
+
+  // Scoring Systems
+  async getScoringSystems() {
+    const response = await this.api.get('/scoring-systems');
+    return response.data;
+  }
+
+  async getScoringSystem(id: string) {
+    const response = await this.api.get(`/scoring-systems/${id}`);
+    return response.data;
+  }
+
+  async getDefaultScoringSystem() {
+    const response = await this.api.get('/scoring-systems/default');
+    return response.data;
+  }
+
+  async createScoringSystem(data: {
+    systemId: string;
+    name: string;
+    description: string;
+    config: any;
+  }) {
+    const response = await this.api.post('/scoring-systems', data);
+    return response.data;
+  }
+
+  async updateScoringSystem(id: string, data: {
+    name?: string;
+    description?: string;
+    config?: any;
+    isActive?: boolean;
+  }) {
+    const response = await this.api.put(`/scoring-systems/${id}`, data);
+    return response.data;
+  }
+
+  async setDefaultScoringSystem(id: string) {
+    const response = await this.api.post(`/scoring-systems/${id}/set-default`);
+    return response.data;
+  }
+
+  async deleteScoringSystem(id: string) {
+    const response = await this.api.delete(`/scoring-systems/${id}`);
+    return response.data;
+  }
+
+  async calculateScore(systemId: string, questionScores: Array<{
+    questionId: string;
+    score: number;
+    weight?: number;
+  }>) {
+    const response = await this.api.post(`/scoring-systems/${systemId}/calculate`, {
+      questionScores
+    });
+    return response.data;
+  }
+
   // Role Profiles
   async getRoleProfiles() {
     const response = await this.api.get('/role-profiles');

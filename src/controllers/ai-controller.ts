@@ -82,6 +82,94 @@ export class AIController {
   }
 
   /**
+   * Generate competencies by category
+   */
+  static async generateByCategory(req: AuthRequest, res: Response) {
+    const { category, count = 5, companyContext } = req.body;
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    if (!['CORE', 'LEADERSHIP', 'FUNCTIONAL'].includes(category)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid category. Must be CORE, LEADERSHIP, or FUNCTIONAL',
+      });
+    }
+
+    const competencies = await AICompetencyService.generateCompetenciesByCategory(
+      tenantId,
+      userId,
+      category,
+      count,
+      companyContext
+    );
+
+    res.json({
+      success: true,
+      data: competencies,
+      message: `${competencies.length} ${category} competencies generated`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Generate assessment questions for a competency
+   */
+  static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
+    const { id } = req.params;
+    const { count = 5, autoSave = true } = req.body;
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    const questions = await AICompetencyService.generateAssessmentQuestions(
+      id,
+      tenantId,
+      userId,
+      count
+    );
+
+    // Auto-save questions to database if requested
+    let savedQuestions = questions;
+    if (autoSave) {
+      const { CompetencyQuestionService } = await import(
+        '../services/competency/question-service'
+      );
+
+      // Map AI-generated types to QuestionType enum
+      const mappedQuestions = questions.map((q: any) => ({
+        statement: q.statement,
+        type: this.mapQuestionType(q.type),
+        examples: q.examples || [],
+      }));
+
+      savedQuestions = await CompetencyQuestionService.bulkCreateQuestions(id, mappedQuestions);
+    }
+
+    res.json({
+      success: true,
+      data: savedQuestions,
+      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved' : 'generated'}`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Map AI-generated question types to QuestionType enum
+   */
+  private static mapQuestionType(aiType: string): 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE' {
+    switch (aiType.toLowerCase()) {
+      case 'behavioral':
+        return 'BEHAVIORAL';
+      case 'outcome':
+        return 'SITUATIONAL';
+      case 'frequency':
+        return 'BEHAVIORAL';
+      default:
+        return 'BEHAVIORAL';
+    }
+  }
+
+  /**
    * Create proficiency levels from AI suggestions
    */
   static async createLevelsFromAI(req: AuthRequest, res: Response) {

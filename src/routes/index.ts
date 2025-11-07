@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth-routes';
 import competencyRoutes from './competency-routes';
+import scoringSystemRoutes from './scoring-system-routes';
 import aiRoutes from './ai-routes';
 import roleRoutes from './role-routes';
 import workflowRoutes from './workflow-routes';
@@ -33,6 +34,7 @@ router.use('/admin', adminRoutes); // Temporary admin endpoints for setup
 
 // Protected routes (require authentication)
 router.use('/competencies', authenticate, competencyRoutes);
+router.use('/scoring-systems', authenticate, scoringSystemRoutes);
 router.use('/roles', authenticate, roleRoutes);
 router.use('/ai', authenticate, aiRoutes);
 router.use('/workflows', authenticate, workflowRoutes);

@@ -39,6 +39,11 @@ router.post(
   asyncHandler(AIController.createLevelsFromAI)
 );
 
+router.post(
+  '/competencies/generate-by-category',
+  asyncHandler(AIController.generateByCategory)
+);
+
 // Text AI operations
 router.post(
   '/text/improve',
