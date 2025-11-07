@@ -38,6 +38,7 @@ router.delete(
   asyncHandler(CompetencyController.delete)
 );
 
+<<<<<<< HEAD
 // Question management routes
 router.get(
   '/:competencyId/questions',
@@ -57,6 +58,25 @@ router.delete(
   '/questions/:id',
   requireRole('ADMIN', 'HR_MANAGER'),
   asyncHandler(CompetencyQuestionController.delete)
+=======
+// Assessment questions for a competency
+router.get('/:id/questions', asyncHandler(CompetencyController.listQuestions));
+router.post(
+  '/:id/questions',
+  requireRole('ADMIN', 'HR_MANAGER'),
+  asyncHandler(CompetencyController.createQuestion)
+);
+router.get('/:id/questions/:questionId', asyncHandler(CompetencyController.getQuestion));
+router.put(
+  '/:id/questions/:questionId',
+  requireRole('ADMIN', 'HR_MANAGER'),
+  asyncHandler(CompetencyController.updateQuestion)
+);
+router.delete(
+  '/:id/questions/:questionId',
+  requireRole('ADMIN', 'HR_MANAGER'),
+  asyncHandler(CompetencyController.deleteQuestion)
+>>>>>>> 12b6853 (feat: Add competency assessment questions feature)
 );
 
 export default router;
