@@ -12,6 +12,9 @@ import organizationalGoalsRoutes from './organizational-goals-routes';
 import goalsRoutes from './goals-routes';
 import pipRoutes from './pip-routes';
 import adminRoutes from './admin-routes';
+import rbacRoutes from './rbac-routes';
+import staffRoutes from './staff-routes';
+import auditRoutes from './audit-routes';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -45,5 +48,10 @@ router.use('/pips', authenticate, pipRoutes);
 // System Admin routes
 router.use('/tenants', authenticate, tenantRoutes);
 router.use('/users', authenticate, userRoutes);
+
+// Access Control routes (RBAC, Staff, Audit)
+router.use('/rbac', rbacRoutes); // Authentication handled within routes
+router.use('/staff', staffRoutes); // Has public endpoint for invitation acceptance
+router.use('/audit', auditRoutes); // Authentication handled within routes
 
 export default router;
