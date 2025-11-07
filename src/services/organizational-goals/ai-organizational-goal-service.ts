@@ -29,6 +29,15 @@ export interface GenerateGoalsInput {
   organizationDescription: string;
 }
 
+export interface GenerateChildGoalsInput {
+  parentGoalId: string;
+  parentGoalTitle: string;
+  parentGoalDescription: string;
+  targetLevel: 'DEPARTMENTAL' | 'TEAM' | 'INDIVIDUAL';
+  context?: string; // Additional context like department name, team name, or employee role
+  numberOfGoals?: number; // How many child goals to generate (default: 3-5)
+}
+
 export class AIOrganizationalGoalService {
   private static orchestrator = LLMOrchestrator.getInstance();
 
@@ -140,6 +149,187 @@ export class AIOrganizationalGoalService {
       return createdGoals;
     } catch (error) {
       aiLogger.error('Failed to create goals from AI suggestions', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Generate child goals for a parent goal (cascading goals)
+   * Can generate departmental, team, or individual goals
+   */
+  static async generateChildGoals(
+    tenantId: string,
+    userId: string,
+    input: GenerateChildGoalsInput
+  ): Promise<GeneratedGoal[]> {
+    try {
+      aiLogger.info('Generating child goals', {
+        parentGoalId: input.parentGoalId,
+        targetLevel: input.targetLevel,
+        context: input.context,
+      });
+
+      // Determine the context description based on target level
+      let contextDescription = '';
+      if (input.targetLevel === 'DEPARTMENTAL') {
+        contextDescription = input.context
+          ? `for the ${input.context} department`
+          : 'for each major department';
+      } else if (input.targetLevel === 'TEAM') {
+        contextDescription = input.context
+          ? `for the ${input.context} team`
+          : 'for teams within the department';
+      } else if (input.targetLevel === 'INDIVIDUAL') {
+        contextDescription = input.context
+          ? `for ${input.context}`
+          : 'for individual contributors';
+      }
+
+      const numberOfGoals = input.numberOfGoals || 3;
+
+      // Create prompt for child goal generation
+      const prompt = `You are a strategic planning expert helping to cascade organizational goals.
+
+PARENT GOAL:
+Title: ${input.parentGoalTitle}
+Description: ${input.parentGoalDescription}
+
+TASK:
+Generate ${numberOfGoals} specific, actionable ${input.targetLevel.toLowerCase()} goals ${contextDescription} that will directly contribute to achieving the parent goal above.
+
+REQUIREMENTS:
+1. Each child goal must be SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
+2. Goals should cascade down and break the parent goal into actionable sub-goals
+3. Goals should be appropriate for the ${input.targetLevel.toLowerCase()} level
+4. Include 2-4 KPIs per goal to measure progress
+5. Assign appropriate weights (totaling 100%)
+6. Each goal should align with one of the Balanced Scorecard perspectives: FINANCIAL, CUSTOMER, INTERNAL_PROCESS, or LEARNING_GROWTH
+
+Return ONLY a valid JSON array with this exact structure:
+[
+  {
+    "title": "Goal title",
+    "description": "Detailed description of what needs to be achieved",
+    "bscPerspective": "FINANCIAL|CUSTOMER|INTERNAL_PROCESS|LEARNING_GROWTH",
+    "department": "${input.context || ''}",
+    "targetDate": "2024-12-31",
+    "weight": 35,
+    "kpis": [
+      {
+        "name": "KPI name",
+        "description": "What this measures",
+        "target": "Target value",
+        "unit": "%|$|#|points",
+        "frequency": "MONTHLY|QUARTERLY|ANNUALLY"
+      }
+    ]
+  }
+]
+
+Ensure weights add up to 100% across all goals. Return ONLY valid JSON, no additional text.`;
+
+      // Generate child goals using AI
+      const response = await this.orchestrator.generateCompletion(
+        prompt,
+        {
+          tenantId,
+          userId,
+          module: 'goal',
+          action: 'generate-child-goals',
+        },
+        {
+          temperature: 0.7,
+          maxTokens: 2500,
+        }
+      );
+
+      // Parse JSON response
+      const childGoals = this.orchestrator.parseJSONResponse<GeneratedGoal[]>(response);
+
+      // Validate structure
+      if (!Array.isArray(childGoals) || childGoals.length === 0) {
+        throw new Error('Invalid response format: expected array of child goals');
+      }
+
+      // Validate each goal has required fields
+      childGoals.forEach((goal, index) => {
+        if (!goal.title || !goal.description || !goal.bscPerspective) {
+          throw new Error(`Child goal at index ${index} missing required fields`);
+        }
+        if (!goal.kpis || !Array.isArray(goal.kpis)) {
+          throw new Error(`Child goal "${goal.title}" missing KPIs array`);
+        }
+      });
+
+      aiLogger.info('Child goals generated successfully', {
+        count: childGoals.length,
+        parentGoalId: input.parentGoalId,
+        targetLevel: input.targetLevel,
+      });
+
+      return childGoals;
+    } catch (error) {
+      aiLogger.error('Failed to generate child goals', {
+        parentGoalId: input.parentGoalId,
+        targetLevel: input.targetLevel,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new AIServiceError('Failed to generate child goals');
+    }
+  }
+
+  /**
+   * Create child goals from AI-generated suggestions
+   */
+  static async createChildGoalsFromAI(
+    tenantId: string,
+    userId: string,
+    parentGoalId: string,
+    targetLevel: 'DEPARTMENTAL' | 'TEAM' | 'INDIVIDUAL',
+    generatedGoals: GeneratedGoal[]
+  ) {
+    try {
+      const createdGoals: any[] = [];
+
+      for (const goalData of generatedGoals) {
+        // Store KPIs and BSC perspective in metadata
+        const metadata = {
+          bscPerspective: goalData.bscPerspective,
+          kpis: goalData.kpis,
+          aiGenerated: true,
+        } as any;
+
+        const goal = await prisma.organizationalGoal.create({
+          data: {
+            tenantId,
+            title: goalData.title,
+            description: goalData.description,
+            level: targetLevel,
+            department: goalData.department || null,
+            parentId: parentGoalId,
+            weight: goalData.weight,
+            targetDate: new Date(goalData.targetDate),
+            createdBy: userId,
+            metadata,
+            status: 'DRAFT',
+          },
+        });
+
+        createdGoals.push(goal);
+      }
+
+      aiLogger.info('Created child goals from AI suggestions', {
+        count: createdGoals.length,
+        parentGoalId,
+        targetLevel,
+        tenantId,
+      });
+
+      return createdGoals;
+    } catch (error) {
+      aiLogger.error('Failed to create child goals from AI suggestions', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
