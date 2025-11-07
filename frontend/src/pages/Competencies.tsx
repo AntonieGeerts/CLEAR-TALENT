@@ -833,7 +833,14 @@ const AssessmentQuestionsModal: React.FC<{
         type: newQuestion.type,
         examples: newQuestion.examples.filter((ex) => ex.trim()),
       });
-      setNewQuestion({ statement: '', type: 'BEHAVIORAL', examples: [''] });
+      setNewQuestion({
+        statement: '',
+        type: 'BEHAVIORAL',
+        examples: [''],
+        weight: 1.0,
+        scoreMin: 1,
+        scoreMax: 5,
+      });
       setShowAddForm(false);
       await loadQuestions();
     } catch (err: any) {
@@ -1023,7 +1030,14 @@ const AssessmentQuestionsModal: React.FC<{
                     <button
                       onClick={() => {
                         setShowAddForm(false);
-                        setNewQuestion({ statement: '', type: 'BEHAVIORAL', examples: [''] });
+                        setNewQuestion({
+                          statement: '',
+                          type: 'BEHAVIORAL',
+                          examples: [''],
+                          weight: 1.0,
+                          scoreMin: 1,
+                          scoreMax: 5,
+                        });
                       }}
                       className="btn btn-secondary"
                     >
