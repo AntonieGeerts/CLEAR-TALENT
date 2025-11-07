@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from './Logo';
 import { Footer } from './Footer';
+import { AdminMenu } from './AdminMenu';
 import {
   LayoutDashboard,
   BookOpen,
@@ -103,6 +104,11 @@ export const Layout: React.FC = () => {
                 </Link>
               );
             })}
+
+            {/* Organizational Admin Menu */}
+            {user?.role === 'ADMIN' && (
+              <AdminMenu onNavigate={() => setSidebarOpen(false)} />
+            )}
           </nav>
 
           {/* User Info */}
