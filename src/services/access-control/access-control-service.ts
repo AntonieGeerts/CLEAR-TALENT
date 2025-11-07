@@ -22,7 +22,7 @@
  */
 
 import { PrismaClient, PermissionScope, MembershipStatus } from '@prisma/client';
-import { logger } from '../../config/logger';
+import { logger } from '../../utils/logger';
 
 const prisma = new PrismaClient();
 
