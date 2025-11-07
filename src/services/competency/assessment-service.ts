@@ -351,7 +351,7 @@ export class AssessmentService {
       averageScore,
       competencyBreakdown,
       startedAt: updatedAssessment.startedAt,
-      completedAt: updatedAssessment.completedAt,
+      completedAt: updatedAssessment.completedAt ?? undefined,
     };
   }
 
