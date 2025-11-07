@@ -463,6 +463,14 @@ class ApiService {
     return response.data.data;
   }
 
+  async getOrganizationalGoalsByLevel(parentId?: string) {
+    const queryParams = new URLSearchParams();
+    if (parentId) queryParams.append('parentId', parentId);
+
+    const response = await this.api.get(`/organizational-goals/by-level?${queryParams.toString()}`);
+    return response.data.data;
+  }
+
   async getOrganizationalGoal(id: string) {
     const response = await this.api.get(`/organizational-goals/${id}`);
     return response.data.data;
