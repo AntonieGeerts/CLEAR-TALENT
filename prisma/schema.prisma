@@ -209,7 +209,6 @@ model ProficiencyLevel {
   questions             CompetencyQuestion[]  // Questions for this proficiency level
   roleCompetencies      RoleCompetency[]
   skillProfiles         SkillProfile[]
-  questions             CompetencyQuestion[]
 
   @@index([competencyId])
   @@map("proficiency_levels")
@@ -232,48 +231,6 @@ model BehavioralIndicator {
   @@index([competencyId])
   @@index([levelId])
   @@map("behavioral_indicators")
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  TRUE_FALSE
-  SCENARIO_BASED
-  BEHAVIORAL
-  SITUATIONAL
-}
-
-enum DifficultyLevel {
-  BASIC
-  INTERMEDIATE
-  ADVANCED
-  EXPERT
-  MASTER
-}
-
-model CompetencyQuestion {
-  id            String          @id @default(uuid())
-  competencyId  String          @map("competency_id")
-  levelId       String?         @map("level_id") // Optional - question may target specific level
-  questionType  QuestionType    @map("question_type")
-  difficulty    DifficultyLevel
-  questionText  String          @db.Text @map("question_text")
-  options       Json?           // Array of options for multiple choice
-  correctAnswer String?         @db.Text @map("correct_answer")
-  explanation   String?         @db.Text
-  tags          String[]        @default([])
-  isActive      Boolean         @default(true) @map("is_active")
-  createdBy     String?         @map("created_by") // User who created or AI-generated
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
-
-  // Relations
-  competency Competency        @relation(fields: [competencyId], references: [id], onDelete: Cascade)
-  level      ProficiencyLevel? @relation(fields: [levelId], references: [id], onDelete: SetNull)
-
-  @@index([competencyId])
-  @@index([levelId])
-  @@index([difficulty])
-  @@map("competency_questions")
 }
 
 // ============================================================================

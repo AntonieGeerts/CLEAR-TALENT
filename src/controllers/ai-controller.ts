@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { AICompetencyService } from '../services/competency/ai-competency-service';
 import { AITextService } from '../services/ai/ai-text-service';
-import { AIQuestionService } from '../services/competency/ai-question-service';
 import {
   SuggestFromJDInput,
   GenerateIndicatorsInput,
@@ -301,44 +300,6 @@ export class AIController {
         structuredText,
       },
       message: 'Feedback structured successfully',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Generate assessment questions using AI
-   */
-  static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
-    const { id } = req.params; // competency ID
-    const tenantId = req.tenant!.id;
-    const userId = req.user!.id;
-    const data = req.body;
-
-    const result = await AIQuestionService.generateQuestions(id, tenantId, userId, data);
-
-    res.json({
-      success: true,
-      data: result,
-      message: 'Assessment questions generated successfully',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Generate and save assessment questions
-   */
-  static async saveAssessmentQuestions(req: AuthRequest, res: Response) {
-    const { id } = req.params; // competency ID
-    const tenantId = req.tenant!.id;
-    const userId = req.user!.id;
-    const data = req.body;
-
-    const result = await AIQuestionService.generateAndSaveQuestions(id, tenantId, userId, data);
-
-    res.status(201).json({
-      success: true,
-      data: result,
-      message: 'Assessment questions generated and saved successfully',
       timestamp: new Date().toISOString(),
     });
   }

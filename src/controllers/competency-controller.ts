@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import { CompetencyService } from '../services/competency/competency-service';
-import { CompetencyQuestionService } from '../services/competency/competency-question-service';
 import {
   CreateCompetencyInput,
   UpdateCompetencyInput,
@@ -90,98 +89,6 @@ export class CompetencyController {
     res.json({
       success: true,
       message: 'Competency deleted successfully',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * List assessment questions for a competency
-   */
-  static async listQuestions(req: AuthRequest, res: Response) {
-    const { id } = req.params;
-    const tenantId = req.tenant!.id;
-    const query = req.query as any;
-
-    const result = await CompetencyQuestionService.listQuestions(id, tenantId, query);
-
-    res.json({
-      success: true,
-      data: result.questions,
-      pagination: result.pagination,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Get a specific assessment question
-   */
-  static async getQuestion(req: AuthRequest, res: Response) {
-    const { id, questionId } = req.params;
-    const tenantId = req.tenant!.id;
-
-    const question = await CompetencyQuestionService.getQuestionById(questionId, id, tenantId);
-
-    res.json({
-      success: true,
-      data: question,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Create an assessment question
-   */
-  static async createQuestion(req: AuthRequest, res: Response) {
-    const { id } = req.params;
-    const tenantId = req.tenant!.id;
-    const userId = req.user!.id;
-    const data = req.body;
-
-    const question = await CompetencyQuestionService.createQuestion(id, tenantId, userId, data);
-
-    res.status(201).json({
-      success: true,
-      data: question,
-      message: 'Assessment question created successfully',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Update an assessment question
-   */
-  static async updateQuestion(req: AuthRequest, res: Response) {
-    const { id, questionId } = req.params;
-    const tenantId = req.tenant!.id;
-    const data = req.body;
-
-    const question = await CompetencyQuestionService.updateQuestion(
-      questionId,
-      id,
-      tenantId,
-      data
-    );
-
-    res.json({
-      success: true,
-      data: question,
-      message: 'Assessment question updated successfully',
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Delete an assessment question
-   */
-  static async deleteQuestion(req: AuthRequest, res: Response) {
-    const { id, questionId } = req.params;
-    const tenantId = req.tenant!.id;
-
-    await CompetencyQuestionService.deleteQuestion(questionId, id, tenantId);
-
-    res.json({
-      success: true,
-      message: 'Assessment question deleted successfully',
       timestamp: new Date().toISOString(),
     });
   }
