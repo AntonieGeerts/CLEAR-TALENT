@@ -274,7 +274,6 @@ export const OrganizationalGoals: React.FC = () => {
                   setSelectedGoal(goal);
                   setShowKPIModal(true);
                 }}
-                onRefresh={loadGoals}
               />
             ))}
           </div>
@@ -348,10 +347,9 @@ interface GoalCardProps {
   onAddChild: (goal: OrganizationalGoal) => void;
   onEdit: (goal: OrganizationalGoal) => void;
   onGenerateKPIs: (goal: OrganizationalGoal) => void;
-  onRefresh: () => void;
 }
 
-const GoalCard: React.FC<GoalCardProps> = ({ goal, onAddChild, onEdit, onGenerateKPIs, onRefresh }) => {
+const GoalCard: React.FC<GoalCardProps> = ({ goal, onAddChild, onEdit, onGenerateKPIs }) => {
   const levelColors = {
     ORGANIZATIONAL: 'bg-blue-50 border-blue-200 hover:border-blue-300',
     DEPARTMENTAL: 'bg-gray-50 border-gray-200 hover:border-gray-300',
