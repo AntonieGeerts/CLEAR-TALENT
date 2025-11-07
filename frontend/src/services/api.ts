@@ -603,6 +603,44 @@ class ApiService {
     const response = await this.api.post(`/pips/${id}/complete`, data);
     return response.data.data;
   }
+
+  // ============================================================================
+  // COMPETENCY ASSESSMENTS
+  // ============================================================================
+
+  async createAssessment(data: { competencyIds: string[] }) {
+    const response = await this.api.post('/assessments', data);
+    return response.data;
+  }
+
+  async getAssessment(id: string) {
+    const response = await this.api.get(`/assessments/${id}`);
+    return response.data;
+  }
+
+  async submitAssessmentResponse(assessmentId: string, data: {
+    questionId: string;
+    rating: number;
+    comment?: string;
+  }) {
+    const response = await this.api.post(`/assessments/${assessmentId}/responses`, data);
+    return response.data;
+  }
+
+  async completeAssessment(assessmentId: string) {
+    const response = await this.api.post(`/assessments/${assessmentId}/complete`);
+    return response.data;
+  }
+
+  async getMyAssessments() {
+    const response = await this.api.get('/assessments/my-assessments');
+    return response.data;
+  }
+
+  async getAssessmentResults(assessmentId: string) {
+    const response = await this.api.get(`/assessments/${assessmentId}/results`);
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();
