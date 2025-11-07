@@ -44,6 +44,11 @@ router.post(
   asyncHandler(AIController.generateByCategory)
 );
 
+router.post(
+  '/competencies/:id/generate-assessment-questions',
+  asyncHandler(AIController.generateAssessmentQuestions)
+);
+
 // Text AI operations
 router.post(
   '/text/improve',

@@ -15,6 +15,7 @@
     "deduplicate:competencies": "tsx scripts/deduplicate-competencies.ts",
     "add-goal-template": "tsx scripts/add-goal-prompt-template.ts",
     "add-competency-templates": "tsx scripts/add-competency-generation-templates.ts",
+    "seed-scoring-systems": "tsx scripts/seed-scoring-systems.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
