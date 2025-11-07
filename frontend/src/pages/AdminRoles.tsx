@@ -67,7 +67,15 @@ export const AdminRoles: React.FC = () => {
       setRoles(rolesRes.data || []);
       setPermissions(permissionsRes.data || []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load roles');
+      // Only show error for actual failures, not empty results
+      if (err.response?.status !== 404) {
+        console.error('Failed to load data:', err);
+        setError(err.response?.data?.message || 'Failed to load data. Please try again.');
+      } else {
+        // 404 means no data, which is fine for new accounts
+        setRoles([]);
+        setPermissions([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -232,78 +240,103 @@ export const AdminRoles: React.FC = () => {
       )}
 
       {/* Roles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {roles.map((role) => (
-          <div key={role.id} className="card hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    role.isSystemDefault
-                      ? 'bg-purple-100'
-                      : 'bg-blue-100'
-                  }`}
-                >
-                  <Shield
-                    className={role.isSystemDefault ? 'text-purple-600' : 'text-blue-600'}
-                    size={20}
-                  />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{role.name}</h3>
-                  {role.isSystemDefault && (
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      System
-                    </span>
-                  )}
-                </div>
-              </div>
-              {!role.isSystemDefault && (
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => openEditModal(role)}
-                    className="text-gray-400 hover:text-primary-600"
-                    title="Edit role"
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteRole(role)}
-                    className="text-gray-400 hover:text-red-600"
-                    title="Delete role"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {role.description || 'No description'}
+      {roles.length === 0 ? (
+        <div className="card">
+          <div className="text-center py-12">
+            <Shield className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No roles found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Get started by creating your first custom role
             </p>
-
-            <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-4">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1">
-                  <Lock size={14} />
-                  <span>{role._count?.permissions || 0} permissions</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Users size={14} />
-                  <span>{role._count?.users || 0} users</span>
-                </div>
-              </div>
+            <div className="mt-6">
               <button
-                onClick={() => openPermissionsModal(role)}
-                className="text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
+                onClick={() => {
+                  setFormData({ name: '', key: '', description: '' });
+                  setSelectedPermissions([]);
+                  setShowCreateModal(true);
+                }}
+                className="btn-primary flex items-center space-x-2 mx-auto"
               >
-                <Settings size={14} />
-                <span>Permissions</span>
+                <Plus size={20} />
+                <span>Create Role</span>
               </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {roles.map((role) => (
+            <div key={role.id} className="card hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      role.isSystemDefault
+                        ? 'bg-purple-100'
+                        : 'bg-blue-100'
+                    }`}
+                  >
+                    <Shield
+                      className={role.isSystemDefault ? 'text-purple-600' : 'text-blue-600'}
+                      size={20}
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{role.name}</h3>
+                    {role.isSystemDefault && (
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                        System
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {!role.isSystemDefault && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => openEditModal(role)}
+                      className="text-gray-400 hover:text-primary-600"
+                      title="Edit role"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRole(role)}
+                      className="text-gray-400 hover:text-red-600"
+                      title="Delete role"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                {role.description || 'No description'}
+              </p>
+
+              <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-4">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-1">
+                    <Lock size={14} />
+                    <span>{role._count?.permissions || 0} permissions</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Users size={14} />
+                    <span>{role._count?.users || 0} users</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => openPermissionsModal(role)}
+                  className="text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
+                >
+                  <Settings size={14} />
+                  <span>Permissions</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Role Modal */}
       {showCreateModal && (

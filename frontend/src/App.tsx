@@ -16,6 +16,7 @@ import { OrganizationalGoals } from './pages/OrganizationalGoals';
 import { PIPs } from './pages/PIPs';
 import { AdminRoles } from './pages/AdminRoles';
 import { AdminStaff } from './pages/AdminStaff';
+import { AdminDepartments } from './pages/AdminDepartments';
 import { AdminAuditLogs } from './pages/AdminAuditLogs';
 
 // Protected Route Component
@@ -92,6 +93,7 @@ function AppRoutes() {
         <Route path="admin/tenants/:tenantId" element={<TenantDetail />} />
         <Route path="admin/roles" element={<AdminRoles />} />
         <Route path="admin/staff" element={<AdminStaff />} />
+        <Route path="admin/departments" element={<AdminDepartments />} />
         <Route path="admin/audit-logs" element={<AdminAuditLogs />} />
         <Route path="organizational-goals" element={<OrganizationalGoals />} />
         <Route path="pips" element={<PIPs />} />

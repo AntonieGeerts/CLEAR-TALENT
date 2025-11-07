@@ -45,9 +45,16 @@ interface Role {
   key: string;
 }
 
+interface Department {
+  id: string;
+  name: string;
+  code?: string;
+}
+
 export const AdminStaff: React.FC = () => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -82,17 +89,28 @@ export const AdminStaff: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [staffRes, rolesRes] = await Promise.all([
+      const [staffRes, rolesRes, departmentsRes] = await Promise.all([
         apiService.getStaff({
           status: statusFilter || undefined,
           role: roleFilter || undefined,
         }),
         apiService.getRoles(),
+        apiService.getDepartments({ isActive: true }),
       ]);
       setStaff(staffRes.data || []);
       setRoles(rolesRes.data || []);
+      setDepartments(departmentsRes.data || []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load staff');
+      // Only show error for actual failures, not empty results
+      if (err.response?.status !== 404) {
+        console.error('Failed to load data:', err);
+        setError(err.response?.data?.message || 'Failed to load data. Please try again.');
+      } else {
+        // 404 means no data, which is fine for new accounts
+        setStaff([]);
+        setRoles([]);
+        setDepartments([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -552,13 +570,18 @@ export const AdminStaff: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Department (Optional)
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="input"
-                    placeholder="e.g., Engineering"
-                  />
+                  >
+                    <option value="">Select department...</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name} {dept.code ? `(${dept.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -676,14 +699,20 @@ export const AdminStaff: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Department
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editFormData.department}
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, department: e.target.value })
                     }
                     className="input"
-                  />
+                  >
+                    <option value="">Select department...</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name} {dept.code ? `(${dept.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

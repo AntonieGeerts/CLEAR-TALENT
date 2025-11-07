@@ -44,6 +44,41 @@ async function main() {
 
   console.log('✓ Created demo tenant:', demoTenant.name);
 
+  // Create default departments
+  const departments = [
+    { name: 'Engineering', code: 'ENG', description: 'Engineering and Technology' },
+    { name: 'Product', code: 'PROD', description: 'Product Management' },
+    { name: 'Design', code: 'DES', description: 'Design and User Experience' },
+    { name: 'Sales', code: 'SAL', description: 'Sales and Business Development' },
+    { name: 'Marketing', code: 'MKT', description: 'Marketing and Communications' },
+    { name: 'Customer Success', code: 'CS', description: 'Customer Success and Support' },
+    { name: 'Human Resources', code: 'HR', description: 'Human Resources' },
+    { name: 'Finance', code: 'FIN', description: 'Finance and Accounting' },
+    { name: 'Operations', code: 'OPS', description: 'Operations and Administration' },
+    { name: 'Legal', code: 'LEG', description: 'Legal and Compliance' },
+  ];
+
+  for (const dept of departments) {
+    await prisma.department.upsert({
+      where: {
+        tenantId_name: {
+          tenantId: demoTenant.id,
+          name: dept.name,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: demoTenant.id,
+        name: dept.name,
+        code: dept.code,
+        description: dept.description,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log('✓ Created default departments');
+
   // Create admin user
   const adminPasswordHash = await bcrypt.hash('admin123', 10);
   const adminUser = await prisma.user.upsert({

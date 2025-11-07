@@ -14,6 +14,7 @@ import pipRoutes from './pip-routes';
 import adminRoutes from './admin-routes';
 import rbacRoutes from './rbac-routes';
 import staffRoutes from './staff-routes';
+import departmentRoutes from './department-routes';
 import auditRoutes from './audit-routes';
 import assessmentRoutes from './assessment-routes';
 import { authenticate } from '../middleware/auth';
@@ -51,9 +52,10 @@ router.use('/assessments', authenticate, assessmentRoutes);
 router.use('/tenants', authenticate, tenantRoutes);
 router.use('/users', authenticate, userRoutes);
 
-// Access Control routes (RBAC, Staff, Audit)
+// Access Control routes (RBAC, Staff, Departments, Audit)
 router.use('/rbac', rbacRoutes); // Authentication handled within routes
 router.use('/staff', staffRoutes); // Has public endpoint for invitation acceptance
+router.use('/departments', departmentRoutes); // Authentication handled within routes
 router.use('/audit', auditRoutes); // Authentication handled within routes
 
 export default router;

@@ -13,8 +13,15 @@ interface RoleProfile {
   };
 }
 
+interface Department {
+  id: string;
+  name: string;
+  code?: string;
+}
+
 export const RoleProfiles: React.FC = () => {
   const [roles, setRoles] = useState<RoleProfile[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -28,8 +35,12 @@ export const RoleProfiles: React.FC = () => {
   const loadRoles = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getRoleProfiles();
-      setRoles(response.data || []);
+      const [rolesResponse, departmentsResponse] = await Promise.all([
+        apiService.getRoleProfiles(),
+        apiService.getDepartments({ isActive: true }),
+      ]);
+      setRoles(rolesResponse.data || []);
+      setDepartments(departmentsResponse.data || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load role profiles');
     } finally {
@@ -146,6 +157,7 @@ export const RoleProfiles: React.FC = () => {
 
       {showCreateModal && (
         <RoleProfileModal
+          departments={departments}
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false);
@@ -157,6 +169,7 @@ export const RoleProfiles: React.FC = () => {
       {showEditModal && selectedRole && (
         <RoleProfileModal
           role={selectedRole}
+          departments={departments}
           onClose={() => {
             setShowEditModal(false);
             setSelectedRole(null);
@@ -174,11 +187,12 @@ export const RoleProfiles: React.FC = () => {
 
 interface RoleProfileModalProps {
   role?: RoleProfile;
+  departments: Department[];
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const RoleProfileModal: React.FC<RoleProfileModalProps> = ({ role, onClose, onSuccess }) => {
+const RoleProfileModal: React.FC<RoleProfileModalProps> = ({ role, departments, onClose, onSuccess }) => {
   const [title, setTitle] = useState(role?.title || '');
   const [department, setDepartment] = useState(role?.department || '');
   const [seniority, setSeniority] = useState(role?.seniority || 'MID');
@@ -244,14 +258,19 @@ const RoleProfileModal: React.FC<RoleProfileModalProps> = ({ role, onClose, onSu
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Department *</label>
-              <input
-                type="text"
+              <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="input"
-                placeholder="e.g., Engineering"
                 required
-              />
+              >
+                <option value="">Select department...</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.name}>
+                    {dept.name} {dept.code ? `(${dept.code})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

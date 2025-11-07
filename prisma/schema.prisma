@@ -40,6 +40,7 @@ model Tenant {
   invitations          Invitation[]
   roles                Role[]
   rolePermissions      RolePermission[]
+  departments          Department[]
   competencies         Competency[]
   roleProfiles         RoleProfile[]
   aiAuditLogs          AIAuditLog[]
@@ -57,6 +58,29 @@ model Tenant {
   auditLogs            AuditLog[]
 
   @@map("tenants")
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  code        String?  // Optional department code (e.g., "ENG", "HR", "FIN")
+  description String?
+  parentId    String?  @map("parent_id") // For hierarchical departments
+  managerId   String?  @map("manager_id") // Department head/manager
+  isActive    Boolean  @default(true) @map("is_active")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children Department[] @relation("DepartmentHierarchy")
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isActive])
+  @@map("departments")
 }
 
 enum UserRole {

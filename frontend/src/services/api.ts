@@ -692,6 +692,59 @@ class ApiService {
   }
 
   // ============================================================================
+  // DEPARTMENT MANAGEMENT
+  // ============================================================================
+
+  async getDepartments(params?: {
+    isActive?: boolean;
+    parentId?: string | null;
+    search?: string;
+  }) {
+    const response = await this.api.get('/departments', { params });
+    return response.data;
+  }
+
+  async getDepartmentHierarchy() {
+    const response = await this.api.get('/departments/hierarchy');
+    return response.data;
+  }
+
+  async getDepartment(departmentId: string) {
+    const response = await this.api.get(`/departments/${departmentId}`);
+    return response.data;
+  }
+
+  async createDepartment(data: {
+    name: string;
+    code?: string;
+    description?: string;
+    parentId?: string;
+    managerId?: string;
+    metadata?: Record<string, any>;
+  }) {
+    const response = await this.api.post('/departments', data);
+    return response.data;
+  }
+
+  async updateDepartment(departmentId: string, data: {
+    name?: string;
+    code?: string;
+    description?: string;
+    parentId?: string;
+    managerId?: string;
+    isActive?: boolean;
+    metadata?: Record<string, any>;
+  }) {
+    const response = await this.api.put(`/departments/${departmentId}`, data);
+    return response.data;
+  }
+
+  async deleteDepartment(departmentId: string) {
+    const response = await this.api.delete(`/departments/${departmentId}`);
+    return response.data;
+  }
+
+  // ============================================================================
   // STAFF MANAGEMENT
   // ============================================================================
 
