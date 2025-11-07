@@ -1453,7 +1453,7 @@ const AssessmentTab: React.FC<{ competencies: Competency[] }> = ({ competencies 
     }
   };
 
-  const competenciesWithQuestions = competencies.filter((c) => {
+  const competenciesWithQuestions = competencies.filter((_c) => {
     // Check if competency has questions (we'll assume it does if it exists)
     return true;
   });
