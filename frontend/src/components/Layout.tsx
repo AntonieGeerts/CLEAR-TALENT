@@ -16,6 +16,9 @@ import {
   Building2,
   AlertTriangle,
   FlagTriangleRight,
+  Shield,
+  Users,
+  FileText,
 } from 'lucide-react';
 
 const getNavItems = (userRole: string | undefined) => {
@@ -27,6 +30,15 @@ const getNavItems = (userRole: string | undefined) => {
   if (userRole === 'SYSTEM_ADMIN') {
     items.push(
       { to: '/admin', icon: Building2, label: 'Tenant Management', roles: ['SYSTEM_ADMIN'] },
+    );
+  }
+
+  // Organizational Admin menu
+  if (userRole === 'ADMIN') {
+    items.push(
+      { to: '/admin/roles', icon: Shield, label: 'Roles & Permissions', roles: ['ADMIN'] },
+      { to: '/admin/staff', icon: Users, label: 'Staff Management', roles: ['ADMIN'] },
+      { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs', roles: ['ADMIN'] },
     );
   }
 

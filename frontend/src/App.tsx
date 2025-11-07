@@ -14,6 +14,9 @@ import { SystemAdminDashboard } from './pages/SystemAdminDashboard';
 import { TenantDetail } from './pages/TenantDetail';
 import { OrganizationalGoals } from './pages/OrganizationalGoals';
 import { PIPs } from './pages/PIPs';
+import { AdminRoles } from './pages/AdminRoles';
+import { AdminStaff } from './pages/AdminStaff';
+import { AdminAuditLogs } from './pages/AdminAuditLogs';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,6 +90,9 @@ function AppRoutes() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="admin" element={<SystemAdminDashboard />} />
         <Route path="admin/tenants/:tenantId" element={<TenantDetail />} />
+        <Route path="admin/roles" element={<AdminRoles />} />
+        <Route path="admin/staff" element={<AdminStaff />} />
+        <Route path="admin/audit-logs" element={<AdminAuditLogs />} />
         <Route path="organizational-goals" element={<OrganizationalGoals />} />
         <Route path="pips" element={<PIPs />} />
         <Route path="competencies" element={<Competencies />} />
