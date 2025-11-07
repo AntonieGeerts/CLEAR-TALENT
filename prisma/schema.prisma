@@ -453,6 +453,7 @@ model CompetencyQuestion {
   competency       Competency        @relation(fields: [competencyId], references: [id], onDelete: Cascade)
   proficiencyLevel ProficiencyLevel? @relation(fields: [proficiencyLevelId], references: [id], onDelete: SetNull)
   scoringSystem    ScoringSystem?    @relation(fields: [scoringSystemId], references: [id], onDelete: SetNull)
+  assessmentResponses AssessmentResponse[]
 
   @@index([competencyId])
   @@index([proficiencyLevelId])
@@ -1007,4 +1008,61 @@ model PerformanceImprovementPlan {
   @@index([employeeId])
   @@index([status])
   @@map("performance_improvement_plans")
+}
+
+// ============================================================================
+// COMPETENCY ASSESSMENTS
+// ============================================================================
+
+enum AssessmentStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model CompetencyAssessment {
+  id              String           @id @default(uuid())
+  tenantId        String           @map("tenant_id")
+  userId          String           @map("user_id")
+  competencyIds   String[]         @default([]) @map("competency_ids") // Competencies being assessed
+  status          AssessmentStatus @default(IN_PROGRESS)
+  startedAt       DateTime         @default(now()) @map("started_at")
+  completedAt     DateTime?        @map("completed_at")
+  totalQuestions  Int              @default(0) @map("total_questions")
+  answeredCount   Int              @default(0) @map("answered_count")
+  totalScore      Float?           @map("total_score") // Aggregated score
+  averageScore    Float?           @map("average_score") // Average score across questions
+  results         Json?            // Detailed results breakdown
+  metadata        Json             @default("{}")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  responses AssessmentResponse[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@map("competency_assessments")
+}
+
+model AssessmentResponse {
+  id           String               @id @default(uuid())
+  assessmentId String               @map("assessment_id")
+  questionId   String               @map("question_id")
+  rating       Int                  // User's rating/score for the question
+  comment      String?              @db.Text // Optional self-reflection or comment
+  score        Float?               // Calculated score based on scoring system
+  metadata     Json                 @default("{}")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  assessment CompetencyAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question   CompetencyQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, questionId])
+  @@index([assessmentId])
+  @@index([questionId])
+  @@map("assessment_responses")
 }
