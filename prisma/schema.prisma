@@ -15,20 +15,31 @@ datasource db {
 // TENANT & USER MANAGEMENT
 // ============================================================================
 
+enum TenantPlan {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
 model Tenant {
-  id               String   @id @default(uuid())
+  id               String      @id @default(uuid())
   name             String
-  slug             String   @unique
-  settings         Json     @default("{}")
-  isActive         Boolean  @default(true) @map("is_active")
-  onboardingStatus String   @default("pending") @map("onboarding_status") // pending, in_progress, completed
+  slug             String      @unique
+  plan             TenantPlan  @default(BASIC)
+  settings         Json        @default("{}")
+  isActive         Boolean     @default(true) @map("is_active")
+  onboardingStatus String      @default("pending") @map("onboarding_status") // pending, in_progress, completed
   logo             String?
-  primaryColor     String?  @map("primary_color")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  primaryColor     String?     @map("primary_color")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
 
   // Relations
   users                User[]
+  memberships          TenantUserMembership[]
+  invitations          Invitation[]
+  roles                Role[]
+  rolePermissions      RolePermission[]
   competencies         Competency[]
   roleProfiles         RoleProfile[]
   aiAuditLogs          AIAuditLog[]
@@ -41,6 +52,9 @@ model Tenant {
   organizationalGoals  OrganizationalGoal[]
   performanceImprovementPlans PerformanceImprovementPlan[]
   scoringSystems       ScoringSystem[]
+  approvalFlows        ApprovalFlowDefinition[]
+  approvalInstances    ApprovalInstance[]
+  auditLogs            AuditLog[]
 
   @@map("tenants")
 }
@@ -56,22 +70,26 @@ enum UserRole {
 }
 
 model User {
-  id                String   @id @default(uuid())
-  tenantId          String?  @map("tenant_id") // Nullable for SYSTEM_ADMIN
-  email             String   @unique
-  passwordHash      String   @map("password_hash")
-  firstName         String   @map("first_name")
-  lastName          String   @map("last_name")
-  role              UserRole
+  id                String    @id @default(uuid())
+  tenantId          String?   @map("tenant_id") // Nullable for SYSTEM_ADMIN
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  firstName         String    @map("first_name")
+  lastName          String    @map("last_name")
+  role              UserRole  // Deprecated - use TenantUserMembership for RBAC
   department        String?
   position          String?
-  potentialRating   Int?     @map("potential_rating") // 1-3 for 9-box matrix
-  aiOptOut          Boolean  @default(false) @map("ai_opt_out")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  potentialRating   Int?      @map("potential_rating") // 1-3 for 9-box matrix
+  aiOptOut          Boolean   @default(false) @map("ai_opt_out")
+  lastLoginAt       DateTime? @map("last_login_at")
+  profile           Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   // Relations
   tenant                        Tenant?                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships                   TenantUserMembership[]
+  invitationsSent               Invitation[]                 @relation("InvitationSender")
   createdCompetencies           Competency[]                 @relation("CompetencyCreator")
   createdRoleProfiles           RoleProfile[]                @relation("RoleProfileCreator")
   aiAuditLogs                   AIAuditLog[]
@@ -84,10 +102,280 @@ model User {
   feedbackReceived              FeedbackItem[]               @relation("FeedbackReceiver")
   performanceImprovementPlans   PerformanceImprovementPlan[] @relation("PIPEmployee")
   createdOrganizationalGoals    OrganizationalGoal[]         @relation("OrgGoalCreator")
+  auditLogs                     AuditLog[]
+  approvalActions               ApprovalAction[]
 
   @@index([tenantId])
   @@index([email])
   @@map("users")
+}
+
+// ============================================================================
+// ACCESS CONTROL & RBAC
+// ============================================================================
+
+enum MembershipStatus {
+  ACTIVE
+  PENDING_INVITE
+  SUSPENDED
+  LEFT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum PermissionScope {
+  SELF    // User can only act on their own resources
+  TEAM    // User can act on their team's resources
+  ORG     // User can act on all resources in the organization
+}
+
+enum ApproverType {
+  ROLE     // Approver is determined by role
+  USER     // Specific user is the approver
+  DYNAMIC  // Approver is determined dynamically (e.g., manager of requester)
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalActionType {
+  APPROVE
+  REJECT
+  REQUEST_CHANGES
+}
+
+model TenantUserMembership {
+  id                String           @id @default(uuid())
+  tenantId          String           @map("tenant_id")
+  userId            String           @map("user_id")
+  primaryRoleId     String           @map("primary_role_id")
+  additionalRoleIds String[]         @default([]) @map("additional_role_ids")
+  status            MembershipStatus @default(ACTIVE)
+  metadata          Json             @default("{}") // department, manager_id, location, etc.
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryRole Role   @relation(fields: [primaryRoleId], references: [id])
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@map("tenant_user_memberships")
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  tenantId       String           @map("tenant_id")
+  email          String
+  invitedByUserId String          @map("invited_by_user_id")
+  roleIds        String[]         @default([]) @map("role_ids")
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime         @map("expires_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedBy  User   @relation("InvitationSender", fields: [invitedByUserId], references: [id])
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([status])
+  @@map("invitations")
+}
+
+model Role {
+  id              String   @id @default(uuid())
+  tenantId        String?  @map("tenant_id") // Nullable for system roles
+  name            String
+  key             String   // e.g., TENANT_OWNER, HR_ADMIN, LINE_MANAGER, EMPLOYEE, READ_ONLY
+  description     String?  @db.Text
+  isSystemDefault Boolean  @default(false) @map("is_system_default")
+  isEditable      Boolean  @default(true) @map("is_editable")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions     RolePermission[]
+  memberships     TenantUserMembership[]
+  approvalSteps   ApprovalStep[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([key])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g., staff.view, staff.manage, roles.manage
+  resource    String   // e.g., staff, roles, approvals, performance_reviews
+  action      String   // e.g., view, create, update, delete, configure, approve
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@index([resource])
+  @@index([action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String           @id @default(uuid())
+  tenantId     String?          @map("tenant_id") // Nullable for system role permissions
+  roleId       String           @map("role_id")
+  permissionId String           @map("permission_id")
+  scope        PermissionScope? // Optional scope restriction
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  tenant     Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([tenantId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================================
+// APPROVAL FLOWS
+// ============================================================================
+
+model ApprovalFlowDefinition {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  name           String
+  key            String   // e.g., promotion_request, salary_adjustment, goal_change
+  description    String?  @db.Text
+  targetResource String   @map("target_resource") // e.g., performance_review, development_plan
+  isActive       Boolean  @default(true) @map("is_active")
+  version        Int      @default(1)
+  createdByUserId String  @map("created_by_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  steps     ApprovalStep[]
+  instances ApprovalInstance[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([isActive])
+  @@map("approval_flow_definitions")
+}
+
+model ApprovalStep {
+  id              String        @id @default(uuid())
+  flowId          String        @map("flow_id")
+  orderIndex      Int           @map("order_index")
+  approverType    ApproverType  @map("approver_type")
+  approverRoleId  String?       @map("approver_role_id")
+  approverUserId  String?       @map("approver_user_id")
+  dynamicRule     Json?         @map("dynamic_rule") // e.g., { "type": "manager_of_requester" }
+  minApprovals    Int           @default(1) @map("min_approvals")
+  slaHours        Int?          @map("sla_hours")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  flow            ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  approverRole    Role?                  @relation(fields: [approverRoleId], references: [id])
+  approvalActions ApprovalAction[]
+
+  @@index([flowId])
+  @@index([orderIndex])
+  @@map("approval_steps")
+}
+
+model ApprovalInstance {
+  id               String         @id @default(uuid())
+  flowId           String         @map("flow_id")
+  tenantId         String         @map("tenant_id")
+  targetEntityType String         @map("target_entity_type") // e.g., PerformanceReview, Request
+  targetEntityId   String         @map("target_entity_id")
+  status           ApprovalStatus @default(PENDING)
+  currentStepIndex Int            @default(0) @map("current_step_index")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  flow    ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  tenant  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actions ApprovalAction[]
+
+  @@index([flowId])
+  @@index([tenantId])
+  @@index([targetEntityType, targetEntityId])
+  @@index([status])
+  @@map("approval_instances")
+}
+
+model ApprovalAction {
+  id                String             @id @default(uuid())
+  instanceId        String             @map("instance_id")
+  stepId            String             @map("step_id")
+  performedByUserId String             @map("performed_by_user_id")
+  action            ApprovalActionType
+  comment           String?            @db.Text
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  instance    ApprovalInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  step        ApprovalStep     @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  performedBy User             @relation(fields: [performedByUserId], references: [id])
+
+  @@index([instanceId])
+  @@index([stepId])
+  @@index([performedByUserId])
+  @@map("approval_actions")
+}
+
+// ============================================================================
+// AUDIT LOGGING
+// ============================================================================
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  actorUserId  String   @map("actor_user_id")
+  eventType    String   @map("event_type") // e.g., staff.invited, role.created
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  metadata     Json     @default("{}") // Diff, old vs new, etc.
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User   @relation(fields: [actorUserId], references: [id])
+
+  @@index([tenantId])
+  @@index([actorUserId])
+  @@index([eventType])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // ============================================================================

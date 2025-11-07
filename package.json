@@ -12,6 +12,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
+    "seed:access-control": "tsx scripts/seed-access-control.ts",
     "deduplicate:competencies": "tsx scripts/deduplicate-competencies.ts",
     "add-goal-template": "tsx scripts/add-goal-prompt-template.ts",
     "add-competency-templates": "tsx scripts/add-competency-generation-templates.ts",
