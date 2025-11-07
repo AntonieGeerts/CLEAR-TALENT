@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Competency } from '../types';
-import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit } from 'lucide-react';
+import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCircle } from 'lucide-react';
+
+type TabType = 'competencies' | 'questions' | 'assessment';
 
 export const Competencies: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('competencies');
   const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -17,6 +21,12 @@ export const Competencies: React.FC = () => {
     loadCompetencies();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 'questions' || activeTab === 'assessment') {
+      loadAllQuestions();
+    }
+  }, [activeTab, competencies]);
+
   const loadCompetencies = async () => {
     try {
       setIsLoading(true);
@@ -26,6 +36,23 @@ export const Competencies: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to load competencies');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAllQuestions = async () => {
+    try {
+      const allQs: any[] = [];
+      for (const comp of competencies) {
+        const response = await apiService.getCompetencyQuestions(comp.id);
+        const questions = (response.data || []).map((q: any) => ({
+          ...q,
+          competency: comp,
+        }));
+        allQs.push(...questions);
+      }
+      setAllQuestions(allQs);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to load questions');
     }
   };
 
@@ -56,47 +83,10 @@ export const Competencies: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Competency Library</h1>
-          <p className="text-gray-600 mt-1">Manage core competencies and skills</p>
+          <p className="text-gray-600 mt-1">Manage competencies, questions, and assessments</p>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setShowGenerateByCategoryModal(true)}
-            className="btn btn-secondary flex items-center space-x-2"
-          >
-            <Sparkles size={20} />
-            <span>Generate by Category</span>
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary flex items-center space-x-2"
-          >
-            <Plus size={20} />
-            <span>New Competency</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Loading State */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader className="animate-spin text-primary-600" size={32} />
-        </div>
-      ) : competencies.length === 0 ? (
-        /* Empty State */
-        <div className="card text-center py-12">
-          <BookOpen className="mx-auto text-gray-400 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No competencies yet</h3>
-          <p className="text-gray-600 mb-6">
-            Get started by generating competencies by category using AI or creating them manually.
-          </p>
-          <div className="flex justify-center space-x-3">
+        {activeTab === 'competencies' && (
+          <div className="flex space-x-3">
             <button
               onClick={() => setShowGenerateByCategoryModal(true)}
               className="btn btn-secondary flex items-center space-x-2"
@@ -109,13 +99,94 @@ export const Competencies: React.FC = () => {
               className="btn btn-primary flex items-center space-x-2"
             >
               <Plus size={20} />
-              <span>Create Manually</span>
+              <span>New Competency</span>
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('competencies')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'competencies'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <BookOpen className="inline-block mr-2" size={18} />
+            Competencies
+          </button>
+          <button
+            onClick={() => setActiveTab('questions')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'questions'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <ClipboardList className="inline-block mr-2" size={18} />
+            Questions ({allQuestions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('assessment')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'assessment'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <CheckCircle className="inline-block mr-2" size={18} />
+            Take Assessment
+          </button>
+        </nav>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
         </div>
-      ) : (
-        /* Competencies Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      )}
+
+      {/* Tab Content */}
+      {activeTab === 'competencies' && (
+        <>
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader className="animate-spin text-primary-600" size={32} />
+            </div>
+          ) : competencies.length === 0 ? (
+            /* Empty State */
+            <div className="card text-center py-12">
+              <BookOpen className="mx-auto text-gray-400 mb-4" size={48} />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No competencies yet</h3>
+              <p className="text-gray-600 mb-6">
+                Get started by generating competencies by category using AI or creating them manually.
+              </p>
+              <div className="flex justify-center space-x-3">
+                <button
+                  onClick={() => setShowGenerateByCategoryModal(true)}
+                  className="btn btn-secondary flex items-center space-x-2"
+                >
+                  <Sparkles size={20} />
+                  <span>Generate by Category</span>
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="btn btn-primary flex items-center space-x-2"
+                >
+                  <Plus size={20} />
+                  <span>Create Manually</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Competencies Grid */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {competencies.map((competency) => (
             <div key={competency.id} className="card hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-4">
@@ -164,6 +235,151 @@ export const Competencies: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+          )}
+        </>
+      )}
+
+      {/* Questions Tab */}
+      {activeTab === 'questions' && (
+        <div className="space-y-4">
+          {allQuestions.length === 0 ? (
+            <div className="card text-center py-12">
+              <ClipboardList className="mx-auto text-gray-400 mb-4" size={48} />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No questions yet</h3>
+              <p className="text-gray-600 mb-6">
+                Generate assessment questions for your competencies to get started.
+              </p>
+              <button
+                onClick={() => setActiveTab('competencies')}
+                className="btn btn-primary"
+              >
+                Go to Competencies
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="card">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  All Assessment Questions ({allQuestions.length})
+                </h2>
+                <p className="text-gray-600 text-sm mb-4">
+                  View and manage all generated assessment questions across your competencies.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {Object.entries(
+                  allQuestions.reduce((acc: any, q) => {
+                    const compName = q.competency.name;
+                    if (!acc[compName]) acc[compName] = [];
+                    acc[compName].push(q);
+                    return acc;
+                  }, {})
+                ).map(([compName, questions]: [string, any]) => (
+                  <div key={compName} className="card">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">{compName}</h3>
+                      <span className="text-sm text-gray-500">{questions.length} questions</span>
+                    </div>
+                    <div className="space-y-3">
+                      {questions.map((q: any, index: number) => (
+                        <div key={q.id} className="border-l-4 border-primary-200 pl-4 py-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-gray-900 mb-2">
+                                <span className="font-semibold text-primary-600 mr-2">
+                                  Q{index + 1}.
+                                </span>
+                                {q.statement}
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
+                                  {q.type.toLowerCase()}
+                                </span>
+                                {q.aiGenerated && (
+                                  <span className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded flex items-center">
+                                    <Sparkles size={12} className="mr-1" />
+                                    AI Generated
+                                  </span>
+                                )}
+                              </div>
+                              {q.examples && q.examples.length > 0 && (
+                                <div className="mt-2 pl-3 border-l-2 border-gray-200">
+                                  <p className="text-xs font-semibold text-gray-700 mb-1">
+                                    Examples:
+                                  </p>
+                                  <ul className="text-xs text-gray-600 space-y-1">
+                                    {q.examples.map((ex: string, i: number) => (
+                                      <li key={i}>• {ex}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Assessment Tab */}
+      {activeTab === 'assessment' && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Take Assessment</h2>
+            <p className="text-gray-600 mb-6">
+              Complete this self-assessment to evaluate your competency levels. Answer each question
+              honestly based on your current capabilities.
+            </p>
+
+            {allQuestions.length === 0 ? (
+              <div className="text-center py-12">
+                <ClipboardList className="mx-auto text-gray-400 mb-4" size={48} />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No questions available</h3>
+                <p className="text-gray-600 mb-6">
+                  Generate assessment questions for your competencies first.
+                </p>
+                <button
+                  onClick={() => setActiveTab('competencies')}
+                  className="btn btn-primary"
+                >
+                  Go to Competencies
+                </button>
+              </div>
+            ) : (
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-6">
+                <div className="flex items-start space-x-4">
+                  <CheckCircle className="text-primary-600 flex-shrink-0" size={24} />
+                  <div>
+                    <h3 className="font-semibold text-primary-900 mb-2">
+                      Assessment Feature Coming Soon
+                    </h3>
+                    <p className="text-primary-800 text-sm mb-4">
+                      The interactive assessment feature is currently under development. You can view
+                      all available questions in the "Questions" tab.
+                    </p>
+                    <div className="text-sm text-primary-700">
+                      <p className="font-medium mb-2">Planned features:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Interactive question-by-question assessment flow</li>
+                        <li>Scoring with configurable scoring systems</li>
+                        <li>Progress tracking and results summary</li>
+                        <li>Competency gap analysis and recommendations</li>
+                        <li>Export and share assessment results</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -761,6 +977,7 @@ const AssessmentQuestionsModal: React.FC<{
   const [scoringSystems, setScoringSystems] = useState<any[]>([]);
   const [selectedScoringSystem, setSelectedScoringSystem] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [newQuestion, setNewQuestion] = useState({
     statement: '',
     type: 'BEHAVIORAL' as 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE',
@@ -848,6 +1065,30 @@ const AssessmentQuestionsModal: React.FC<{
     }
   };
 
+  const handleEditQuestion = (question: any) => {
+    setEditingQuestion(question);
+    setShowAddForm(false);
+  };
+
+  const handleUpdateQuestion = async () => {
+    if (!editingQuestion.statement.trim()) {
+      setError('Question statement is required');
+      return;
+    }
+
+    try {
+      await apiService.updateCompetencyQuestion(editingQuestion.id, {
+        statement: editingQuestion.statement,
+        type: editingQuestion.type,
+        examples: editingQuestion.examples.filter((ex: string) => ex.trim()),
+      });
+      setEditingQuestion(null);
+      await loadQuestions();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update question');
+    }
+  };
+
   const handleDeleteQuestion = async (questionId: string) => {
     if (!confirm('Are you sure you want to delete this question?')) return;
 
@@ -906,45 +1147,142 @@ const AssessmentQuestionsModal: React.FC<{
                 <div className="space-y-3">
                   {questions.map((q, index) => (
                     <div key={q.id} className="card">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3 flex-1">
-                          <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-sm">
-                            {index + 1}
-                          </span>
-                          <div className="flex-1">
-                            <p className="text-gray-900 mb-2">{q.statement}</p>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
-                                {q.type.toLowerCase()}
-                              </span>
-                              {q.aiGenerated && (
-                                <span className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded flex items-center">
-                                  <Sparkles size={12} className="mr-1" />
-                                  AI
-                                </span>
-                              )}
-                            </div>
-                            {q.examples && q.examples.length > 0 && (
-                              <div className="mt-3 pl-3 border-l-2 border-gray-200">
-                                <p className="text-xs font-semibold text-gray-700 mb-1">
-                                  Examples:
-                                </p>
-                                <ul className="text-xs text-gray-600 space-y-1">
-                                  {q.examples.map((ex: string, i: number) => (
-                                    <li key={i}>• {ex}</li>
-                                  ))}
-                                </ul>
+                      {editingQuestion?.id === q.id ? (
+                        /* Edit Form */
+                        <div className="space-y-4">
+                          <div>
+                            <label className="label">Question Statement</label>
+                            <textarea
+                              value={editingQuestion.statement}
+                              onChange={(e) =>
+                                setEditingQuestion({ ...editingQuestion, statement: e.target.value })
+                              }
+                              className="input min-h-[80px]"
+                              placeholder="Enter the assessment question..."
+                            />
+                          </div>
+                          <div>
+                            <label className="label">Question Type</label>
+                            <select
+                              value={editingQuestion.type}
+                              onChange={(e) =>
+                                setEditingQuestion({ ...editingQuestion, type: e.target.value })
+                              }
+                              className="input"
+                            >
+                              <option value="BEHAVIORAL">Behavioral</option>
+                              <option value="SITUATIONAL">Situational</option>
+                              <option value="TECHNICAL">Technical</option>
+                              <option value="KNOWLEDGE">Knowledge</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="label">Examples (Optional)</label>
+                            {editingQuestion.examples.map((ex: string, i: number) => (
+                              <div key={i} className="flex space-x-2 mb-2">
+                                <input
+                                  type="text"
+                                  value={ex}
+                                  onChange={(e) => {
+                                    const newExamples = [...editingQuestion.examples];
+                                    newExamples[i] = e.target.value;
+                                    setEditingQuestion({ ...editingQuestion, examples: newExamples });
+                                  }}
+                                  className="input flex-1"
+                                  placeholder="Example..."
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newExamples = editingQuestion.examples.filter(
+                                      (_: any, idx: number) => idx !== i
+                                    );
+                                    setEditingQuestion({ ...editingQuestion, examples: newExamples });
+                                  }}
+                                  className="btn btn-secondary"
+                                >
+                                  Remove
+                                </button>
                               </div>
-                            )}
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingQuestion({
+                                  ...editingQuestion,
+                                  examples: [...editingQuestion.examples, ''],
+                                });
+                              }}
+                              className="btn btn-secondary text-sm"
+                            >
+                              <Plus size={14} className="inline mr-1" />
+                              Add Example
+                            </button>
+                          </div>
+                          <div className="flex justify-end space-x-3">
+                            <button
+                              onClick={() => setEditingQuestion(null)}
+                              className="btn btn-secondary"
+                            >
+                              Cancel
+                            </button>
+                            <button onClick={handleUpdateQuestion} className="btn btn-primary">
+                              Update Question
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleDeleteQuestion(q.id)}
-                          className="ml-2 text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      ) : (
+                        /* Display Mode */
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-3 flex-1">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold text-sm">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1">
+                              <p className="text-gray-900 mb-2">{q.statement}</p>
+                              <div className="flex items-center space-x-2 mb-2">
+                                <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
+                                  {q.type.toLowerCase()}
+                                </span>
+                                {q.aiGenerated && (
+                                  <span className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded flex items-center">
+                                    <Sparkles size={12} className="mr-1" />
+                                    AI
+                                  </span>
+                                )}
+                              </div>
+                              {q.examples && q.examples.length > 0 && (
+                                <div className="mt-3 pl-3 border-l-2 border-gray-200">
+                                  <p className="text-xs font-semibold text-gray-700 mb-1">
+                                    Examples:
+                                  </p>
+                                  <ul className="text-xs text-gray-600 space-y-1">
+                                    {q.examples.map((ex: string, i: number) => (
+                                      <li key={i}>• {ex}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEditQuestion(q)}
+                              className="text-primary-600 hover:text-primary-800"
+                              title="Edit question"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQuestion(q.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Delete question"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
