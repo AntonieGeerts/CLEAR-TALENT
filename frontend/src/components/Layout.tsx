@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from './Logo';
 import { Footer } from './Footer';
+import { AdminMenu } from './AdminMenu';
 import {
   LayoutDashboard,
   BookOpen,
@@ -16,9 +17,6 @@ import {
   Building2,
   AlertTriangle,
   FlagTriangleRight,
-  Shield,
-  Users,
-  FileText,
 } from 'lucide-react';
 
 const getNavItems = (userRole: string | undefined) => {
@@ -30,15 +28,6 @@ const getNavItems = (userRole: string | undefined) => {
   if (userRole === 'SYSTEM_ADMIN') {
     items.push(
       { to: '/admin', icon: Building2, label: 'Tenant Management', roles: ['SYSTEM_ADMIN'] },
-    );
-  }
-
-  // Organizational Admin menu
-  if (userRole === 'ADMIN') {
-    items.push(
-      { to: '/admin/roles', icon: Shield, label: 'Roles & Permissions', roles: ['ADMIN'] },
-      { to: '/admin/staff', icon: Users, label: 'Staff Management', roles: ['ADMIN'] },
-      { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs', roles: ['ADMIN'] },
     );
   }
 
@@ -103,6 +92,11 @@ export const Layout: React.FC = () => {
                 </Link>
               );
             })}
+
+            {/* Organizational Admin Menu */}
+            {user?.role === 'ADMIN' && (
+              <AdminMenu onNavigate={() => setSidebarOpen(false)} />
+            )}
           </nav>
 
           {/* User Info */}
