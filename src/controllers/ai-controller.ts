@@ -138,7 +138,7 @@ export class AIController {
       // Map AI-generated types to QuestionType enum
       const mappedQuestions = questions.map((q: any) => ({
         statement: q.statement,
-        type: this.mapQuestionType(q.type),
+        type: AIController.mapQuestionType(q.type),
         examples: q.examples || [],
       }));
 
