@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, ChevronRight, ChevronDown, Edit2, Sparkles, Loader, Zap, Trash2 } from 'lucide-react';
+import { Target, Plus, Edit2, Sparkles, Loader, Zap, Trash2 } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface OrganizationalGoal {
@@ -13,6 +13,10 @@ interface OrganizationalGoal {
   targetDate?: string;
   status: string;
   children?: OrganizationalGoal[];
+  parent?: {
+    id: string;
+    title: string;
+  };
   creator?: {
     firstName: string;
     lastName: string;
@@ -22,8 +26,31 @@ interface OrganizationalGoal {
   };
 }
 
+type GoalLevel = 'ORGANIZATIONAL' | 'DEPARTMENTAL' | 'TEAM' | 'INDIVIDUAL';
+
+interface GoalsByLevel {
+  organizational: OrganizationalGoal[];
+  departmental: OrganizationalGoal[];
+  team: OrganizationalGoal[];
+  individual: OrganizationalGoal[];
+  counts: {
+    organizational: number;
+    departmental: number;
+    team: number;
+    individual: number;
+    total: number;
+  };
+}
+
 export const OrganizationalGoals: React.FC = () => {
-  const [goals, setGoals] = useState<OrganizationalGoal[]>([]);
+  const [goalsByLevel, setGoalsByLevel] = useState<GoalsByLevel>({
+    organizational: [],
+    departmental: [],
+    team: [],
+    individual: [],
+    counts: { organizational: 0, departmental: 0, team: 0, individual: 0, total: 0 }
+  });
+  const [activeTab, setActiveTab] = useState<GoalLevel>('ORGANIZATIONAL');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -39,8 +66,8 @@ export const OrganizationalGoals: React.FC = () => {
   const loadGoals = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getOrganizationalGoalsTree();
-      setGoals(data);
+      const data = await apiService.getOrganizationalGoalsByLevel();
+      setGoalsByLevel(data);
     } catch (error) {
       console.error('Failed to load goals:', error);
     } finally {
@@ -49,9 +76,10 @@ export const OrganizationalGoals: React.FC = () => {
   };
 
   const handleDeleteAllGoals = async () => {
+    const totalGoals = goalsByLevel.counts.total;
     const confirmed = window.confirm(
       `Are you sure you want to delete ALL organizational goals?\n\n` +
-      `This will permanently delete ${goals.length} goal${goals.length !== 1 ? 's' : ''} and all their children.\n\n` +
+      `This will permanently delete ${totalGoals} goal${totalGoals !== 1 ? 's' : ''} and all their children.\n\n` +
       `This action cannot be undone!`
     );
 
@@ -70,6 +98,9 @@ export const OrganizationalGoals: React.FC = () => {
     }
   };
 
+  // Get goals for the active tab
+  const activeGoals = goalsByLevel[activeTab.toLowerCase() as keyof Omit<GoalsByLevel, 'counts'>] as OrganizationalGoal[];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -87,7 +118,7 @@ export const OrganizationalGoals: React.FC = () => {
           <p className="text-gray-600 mt-1">Cascading goals aligned with strategic objectives</p>
         </div>
         <div className="flex items-center gap-3">
-          {goals.length > 0 && (
+          {goalsByLevel.counts.total > 0 && (
             <button
               onClick={handleDeleteAllGoals}
               className="btn btn-secondary flex items-center gap-2 text-red-600 hover:bg-red-50 border-red-300"
@@ -98,6 +129,13 @@ export const OrganizationalGoals: React.FC = () => {
             </button>
           )}
           <button
+            onClick={() => setShowAIModal(true)}
+            className="btn btn-secondary flex items-center gap-2"
+          >
+            <Sparkles size={20} />
+            Generate with AI
+          </button>
+          <button
             onClick={() => {
               setSelectedParent(null);
               setShowCreateModal(true);
@@ -105,24 +143,83 @@ export const OrganizationalGoals: React.FC = () => {
             className="btn btn-primary flex items-center gap-2"
           >
             <Plus size={20} />
-            Add Organizational Goal
+            Add Goal
           </button>
         </div>
       </div>
 
-      {/* Goal Hierarchy */}
+      {/* Goal Hierarchy with Tabs */}
       <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Goal Hierarchy</h2>
-          <div className="flex gap-2">
-            <span className="badge badge-primary">Organizational</span>
-            <span className="badge badge-secondary">Departmental</span>
-            <span className="badge" style={{ backgroundColor: '#10b981', color: 'white' }}>Team</span>
-            <span className="badge" style={{ backgroundColor: '#8b5cf6', color: 'white' }}>Individual</span>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">Goal Hierarchy</h2>
+
+          {/* Tab Navigation */}
+          <div className="flex gap-2 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('ORGANIZATIONAL')}
+              className={`px-4 py-2 font-medium transition-colors relative ${
+                activeTab === 'ORGANIZATIONAL'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Organizational
+              {goalsByLevel.counts.organizational > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                  {goalsByLevel.counts.organizational}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('DEPARTMENTAL')}
+              className={`px-4 py-2 font-medium transition-colors relative ${
+                activeTab === 'DEPARTMENTAL'
+                  ? 'text-gray-600 border-b-2 border-gray-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Departmental
+              {goalsByLevel.counts.departmental > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
+                  {goalsByLevel.counts.departmental}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('TEAM')}
+              className={`px-4 py-2 font-medium transition-colors relative ${
+                activeTab === 'TEAM'
+                  ? 'text-green-600 border-b-2 border-green-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Team
+              {goalsByLevel.counts.team > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                  {goalsByLevel.counts.team}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('INDIVIDUAL')}
+              className={`px-4 py-2 font-medium transition-colors relative ${
+                activeTab === 'INDIVIDUAL'
+                  ? 'text-purple-600 border-b-2 border-purple-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Individual
+              {goalsByLevel.counts.individual > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
+                  {goalsByLevel.counts.individual}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
-        {goals.length === 0 ? (
+        {/* Tab Content */}
+        {goalsByLevel.counts.total === 0 ? (
           <div className="text-center py-12">
             <Target className="mx-auto text-gray-400 mb-4" size={48} />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No goals yet</h3>
@@ -143,10 +240,26 @@ export const OrganizationalGoals: React.FC = () => {
               </button>
             </div>
           </div>
+        ) : activeGoals.length === 0 ? (
+          <div className="text-center py-12">
+            <Target className="mx-auto text-gray-400 mb-4" size={48} />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No {activeTab.toLowerCase()} goals yet</h3>
+            <p className="text-gray-600 mb-4">Create {activeTab.toLowerCase()} goals to support your organizational objectives</p>
+            <button
+              onClick={() => {
+                setSelectedParent(null);
+                setShowCreateModal(true);
+              }}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Add {activeTab.charAt(0) + activeTab.slice(1).toLowerCase()} Goal
+            </button>
+          </div>
         ) : (
           <div className="space-y-2">
-            {goals.map((goal) => (
-              <GoalTreeNode
+            {activeGoals.map((goal) => (
+              <GoalCard
                 key={goal.id}
                 goal={goal}
                 onAddChild={(parent) => {
@@ -230,109 +343,102 @@ export const OrganizationalGoals: React.FC = () => {
   );
 };
 
-interface GoalTreeNodeProps {
+interface GoalCardProps {
   goal: OrganizationalGoal;
-  level?: number;
   onAddChild: (goal: OrganizationalGoal) => void;
   onEdit: (goal: OrganizationalGoal) => void;
   onGenerateKPIs: (goal: OrganizationalGoal) => void;
   onRefresh: () => void;
 }
 
-const GoalTreeNode: React.FC<GoalTreeNodeProps> = ({ goal, level = 0, onAddChild, onEdit, onGenerateKPIs, onRefresh }) => {
-  const [expanded, setExpanded] = useState(true);
-
+const GoalCard: React.FC<GoalCardProps> = ({ goal, onAddChild, onEdit, onGenerateKPIs, onRefresh }) => {
   const levelColors = {
-    ORGANIZATIONAL: 'bg-blue-100 text-blue-700 border-blue-200',
-    DEPARTMENTAL: 'bg-gray-100 text-gray-700 border-gray-200',
-    TEAM: 'bg-green-100 text-green-700 border-green-200',
-    INDIVIDUAL: 'bg-purple-100 text-purple-700 border-purple-200',
+    ORGANIZATIONAL: 'bg-blue-50 border-blue-200 hover:border-blue-300',
+    DEPARTMENTAL: 'bg-gray-50 border-gray-200 hover:border-gray-300',
+    TEAM: 'bg-green-50 border-green-200 hover:border-green-300',
+    INDIVIDUAL: 'bg-purple-50 border-purple-200 hover:border-purple-300',
+  };
+
+  const levelBadgeColors = {
+    ORGANIZATIONAL: 'bg-blue-100 text-blue-700',
+    DEPARTMENTAL: 'bg-gray-100 text-gray-700',
+    TEAM: 'bg-green-100 text-green-700',
+    INDIVIDUAL: 'bg-purple-100 text-purple-700',
   };
 
   const levelColor = levelColors[goal.level];
+  const levelBadgeColor = levelBadgeColors[goal.level];
 
   return (
-    <div className="ml-4">
-      <div className={`border rounded-lg p-4 ${levelColor} hover:shadow-md transition-shadow`}>
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1">
-            {goal.children && goal.children.length > 0 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="mt-1 hover:bg-white hover:bg-opacity-50 rounded p-1"
-              >
-                {expanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-              </button>
-            )}
-            <Target size={20} className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-lg">{goal.title}</h3>
-                <span className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded">
-                  {goal.level}
+    <div className={`border rounded-lg p-4 ${levelColor} hover:shadow-md transition-all`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <Target size={20} className="mt-1 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <h3 className="font-semibold text-lg text-gray-900">{goal.title}</h3>
+              <span className={`text-xs px-2 py-1 rounded ${levelBadgeColor}`}>
+                {goal.level}
+              </span>
+              {goal.weight && (
+                <span className="text-xs px-2 py-1 bg-white border border-gray-200 rounded">
+                  Weight: {goal.weight}%
                 </span>
-                {goal.weight && (
-                  <span className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded">
-                    Weight: {goal.weight}%
-                  </span>
-                )}
-              </div>
-              {goal.description && (
-                <p className="text-sm opacity-90 mb-2">{goal.description}</p>
               )}
-              <div className="flex items-center gap-4 text-xs opacity-75">
-                {goal.creator && (
-                  <span>Created by: {goal.creator.firstName} {goal.creator.lastName}</span>
-                )}
-                {goal.targetDate && (
-                  <span>Target: {new Date(goal.targetDate).toLocaleDateString()}</span>
-                )}
-                {goal.department && <span>Dept: {goal.department}</span>}
-              </div>
+              {goal.status && (
+                <span className={`text-xs px-2 py-1 rounded ${
+                  goal.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                  goal.status === 'COMPLETED' ? 'bg-gray-100 text-gray-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {goal.status}
+                </span>
+              )}
+            </div>
+            {goal.description && (
+              <p className="text-sm text-gray-600 mb-3">{goal.description}</p>
+            )}
+            <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+              {goal.creator && (
+                <span>Created by: {goal.creator.firstName} {goal.creator.lastName}</span>
+              )}
+              {goal.targetDate && (
+                <span>Target: {new Date(goal.targetDate).toLocaleDateString()}</span>
+              )}
+              {goal.department && <span>Dept: {goal.department}</span>}
+              {goal.parent && (
+                <span className="text-blue-600">Parent: {goal.parent.title}</span>
+              )}
+              {goal._count && goal._count.children > 0 && (
+                <span className="text-green-600">{goal._count.children} child goal{goal._count.children !== 1 ? 's' : ''}</span>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onGenerateKPIs(goal)}
-              className="p-2 hover:bg-white hover:bg-opacity-50 rounded"
-              title="Generate KPIs with AI"
-            >
-              <Zap size={18} />
-            </button>
-            <button
-              onClick={() => onAddChild(goal)}
-              className="p-2 hover:bg-white hover:bg-opacity-50 rounded"
-              title="Add child goal"
-            >
-              <Plus size={18} />
-            </button>
-            <button
-              onClick={() => onEdit(goal)}
-              className="p-2 hover:bg-white hover:bg-opacity-50 rounded"
-              title="Edit goal"
-            >
-              <Edit2 size={18} />
-            </button>
-          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+          <button
+            onClick={() => onGenerateKPIs(goal)}
+            className="p-2 hover:bg-white rounded transition-colors"
+            title="Generate KPIs with AI"
+          >
+            <Zap size={18} className="text-yellow-600" />
+          </button>
+          <button
+            onClick={() => onAddChild(goal)}
+            className="p-2 hover:bg-white rounded transition-colors"
+            title="Add child goal"
+          >
+            <Plus size={18} className="text-green-600" />
+          </button>
+          <button
+            onClick={() => onEdit(goal)}
+            className="p-2 hover:bg-white rounded transition-colors"
+            title="Edit goal"
+          >
+            <Edit2 size={18} className="text-blue-600" />
+          </button>
         </div>
       </div>
-
-      {/* Children */}
-      {expanded && goal.children && goal.children.length > 0 && (
-        <div className="mt-2 space-y-2">
-          {goal.children.map((child) => (
-            <GoalTreeNode
-              key={child.id}
-              goal={child}
-              level={level + 1}
-              onAddChild={onAddChild}
-              onEdit={onEdit}
-              onGenerateKPIs={onGenerateKPIs}
-              onRefresh={onRefresh}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };
