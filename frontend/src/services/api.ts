@@ -641,6 +641,153 @@ class ApiService {
     const response = await this.api.get(`/assessments/${assessmentId}/results`);
     return response.data;
   }
+
+  // ============================================================================
+  // RBAC (Role-Based Access Control)
+  // ============================================================================
+
+  async getRoles() {
+    const response = await this.api.get('/rbac/roles');
+    return response.data;
+  }
+
+  async getRole(roleId: string) {
+    const response = await this.api.get(`/rbac/roles/${roleId}`);
+    return response.data;
+  }
+
+  async createRole(data: {
+    name: string;
+    key: string;
+    description?: string;
+    permissionIds: string[];
+  }) {
+    const response = await this.api.post('/rbac/roles', data);
+    return response.data;
+  }
+
+  async updateRole(roleId: string, data: {
+    name?: string;
+    description?: string;
+  }) {
+    const response = await this.api.put(`/rbac/roles/${roleId}`, data);
+    return response.data;
+  }
+
+  async deleteRole(roleId: string) {
+    const response = await this.api.delete(`/rbac/roles/${roleId}`);
+    return response.data;
+  }
+
+  async assignRolePermissions(roleId: string, permissionIds: string[]) {
+    const response = await this.api.put(`/rbac/roles/${roleId}/permissions`, {
+      permissionIds,
+    });
+    return response.data;
+  }
+
+  async getPermissions() {
+    const response = await this.api.get('/rbac/permissions');
+    return response.data;
+  }
+
+  // ============================================================================
+  // STAFF MANAGEMENT
+  // ============================================================================
+
+  async getStaff(params?: {
+    status?: string;
+    role?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const response = await this.api.get('/staff', { params });
+    return response.data;
+  }
+
+  async inviteStaff(data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    roleId: string;
+    additionalRoleIds?: string[];
+    metadata?: Record<string, any>;
+  }) {
+    const response = await this.api.post('/staff/invite', data);
+    return response.data;
+  }
+
+  async updateStaffMembership(membershipId: string, data: {
+    primaryRoleId?: string;
+    additionalRoleIds?: string[];
+    status?: string;
+    metadata?: Record<string, any>;
+  }) {
+    const response = await this.api.put(`/staff/${membershipId}`, data);
+    return response.data;
+  }
+
+  async removeStaffMember(membershipId: string) {
+    const response = await this.api.delete(`/staff/${membershipId}`);
+    return response.data;
+  }
+
+  async resendInvitation(invitationId: string) {
+    const response = await this.api.post(`/staff/invitations/${invitationId}/resend`);
+    return response.data;
+  }
+
+  async revokeInvitation(invitationId: string) {
+    const response = await this.api.delete(`/staff/invitations/${invitationId}`);
+    return response.data;
+  }
+
+  async acceptInvitation(data: {
+    token: string;
+    password: string;
+  }) {
+    const response = await this.api.post('/staff/accept-invitation', data);
+    return response.data;
+  }
+
+  // ============================================================================
+  // AUDIT LOGS
+  // ============================================================================
+
+  async getAuditLogs(params?: {
+    eventType?: string;
+    actorUserId?: string;
+    resourceType?: string;
+    resourceId?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const response = await this.api.get('/audit/logs', { params });
+    return response.data;
+  }
+
+  async getResourceAuditTrail(resourceType: string, resourceId: string) {
+    const response = await this.api.get(`/audit/resources/${resourceType}/${resourceId}`);
+    return response.data;
+  }
+
+  async exportAuditLogs(params?: {
+    eventType?: string;
+    actorUserId?: string;
+    resourceType?: string;
+    startDate?: string;
+    endDate?: string;
+    format?: string;
+  }) {
+    const response = await this.api.get('/audit/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();
