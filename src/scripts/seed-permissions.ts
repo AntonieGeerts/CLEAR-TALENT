@@ -15,154 +15,142 @@ const prisma = new PrismaClient();
 // Define all permissions for the system
 const PERMISSIONS = [
   // Role Management
-  { resource: 'role', action: 'create', scope: 'ORG', description: 'Create custom roles' },
-  { resource: 'role', action: 'read', scope: 'ORG', description: 'View roles' },
-  { resource: 'role', action: 'update', scope: 'ORG', description: 'Update role details' },
-  { resource: 'role', action: 'delete', scope: 'ORG', description: 'Delete custom roles' },
-  { resource: 'role', action: 'assign_permissions', scope: 'ORG', description: 'Assign permissions to roles' },
+  { key: 'role.create', resource: 'role', action: 'create', description: 'Create custom roles' },
+  { key: 'role.read', resource: 'role', action: 'read', description: 'View roles' },
+  { key: 'role.update', resource: 'role', action: 'update', description: 'Update role details' },
+  { key: 'role.delete', resource: 'role', action: 'delete', description: 'Delete custom roles' },
+  { key: 'role.assign_permissions', resource: 'role', action: 'assign_permissions', description: 'Assign permissions to roles' },
 
   // Permission Management
-  { resource: 'permission', action: 'read', scope: 'ORG', description: 'View permissions' },
+  { key: 'permission.read', resource: 'permission', action: 'read', description: 'View permissions' },
 
   // Staff Management
-  { resource: 'staff', action: 'invite', scope: 'ORG', description: 'Invite staff members' },
-  { resource: 'staff', action: 'read', scope: 'ORG', description: 'View staff members' },
-  { resource: 'staff', action: 'update', scope: 'ORG', description: 'Update staff membership' },
-  { resource: 'staff', action: 'remove', scope: 'ORG', description: 'Remove staff members' },
+  { key: 'staff.invite', resource: 'staff', action: 'invite', description: 'Invite staff members' },
+  { key: 'staff.read', resource: 'staff', action: 'read', description: 'View staff members' },
+  { key: 'staff.update', resource: 'staff', action: 'update', description: 'Update staff membership' },
+  { key: 'staff.remove', resource: 'staff', action: 'remove', description: 'Remove staff members' },
 
   // Audit Logs
-  { resource: 'audit', action: 'read', scope: 'ORG', description: 'View audit logs' },
-  { resource: 'audit', action: 'export', scope: 'ORG', description: 'Export audit logs' },
+  { key: 'audit.read', resource: 'audit', action: 'read', description: 'View audit logs' },
+  { key: 'audit.export', resource: 'audit', action: 'export', description: 'Export audit logs' },
 
   // Competency Management
-  { resource: 'competency', action: 'create', scope: 'ORG', description: 'Create competencies' },
-  { resource: 'competency', action: 'read', scope: 'ORG', description: 'View competencies' },
-  { resource: 'competency', action: 'read', scope: 'TEAM', description: 'View team competencies' },
-  { resource: 'competency', action: 'read', scope: 'SELF', description: 'View own competencies' },
-  { resource: 'competency', action: 'update', scope: 'ORG', description: 'Update competencies' },
-  { resource: 'competency', action: 'delete', scope: 'ORG', description: 'Delete competencies' },
+  { key: 'competency.create', resource: 'competency', action: 'create', description: 'Create competencies' },
+  { key: 'competency.read', resource: 'competency', action: 'read', description: 'View competencies' },
+  { key: 'competency.update', resource: 'competency', action: 'update', description: 'Update competencies' },
+  { key: 'competency.delete', resource: 'competency', action: 'delete', description: 'Delete competencies' },
 
   // Role Profile Management
-  { resource: 'role_profile', action: 'create', scope: 'ORG', description: 'Create role profiles' },
-  { resource: 'role_profile', action: 'read', scope: 'ORG', description: 'View role profiles' },
-  { resource: 'role_profile', action: 'read', scope: 'TEAM', description: 'View team role profiles' },
-  { resource: 'role_profile', action: 'read', scope: 'SELF', description: 'View own role profile' },
-  { resource: 'role_profile', action: 'update', scope: 'ORG', description: 'Update role profiles' },
-  { resource: 'role_profile', action: 'delete', scope: 'ORG', description: 'Delete role profiles' },
+  { key: 'role_profile.create', resource: 'role_profile', action: 'create', description: 'Create role profiles' },
+  { key: 'role_profile.read', resource: 'role_profile', action: 'read', description: 'View role profiles' },
+  { key: 'role_profile.update', resource: 'role_profile', action: 'update', description: 'Update role profiles' },
+  { key: 'role_profile.delete', resource: 'role_profile', action: 'delete', description: 'Delete role profiles' },
 
   // Goal Management
-  { resource: 'goal', action: 'create', scope: 'ORG', description: 'Create organization goals' },
-  { resource: 'goal', action: 'create', scope: 'TEAM', description: 'Create team goals' },
-  { resource: 'goal', action: 'create', scope: 'SELF', description: 'Create personal goals' },
-  { resource: 'goal', action: 'read', scope: 'ORG', description: 'View all goals' },
-  { resource: 'goal', action: 'read', scope: 'TEAM', description: 'View team goals' },
-  { resource: 'goal', action: 'read', scope: 'SELF', description: 'View own goals' },
-  { resource: 'goal', action: 'update', scope: 'ORG', description: 'Update organization goals' },
-  { resource: 'goal', action: 'update', scope: 'TEAM', description: 'Update team goals' },
-  { resource: 'goal', action: 'update', scope: 'SELF', description: 'Update own goals' },
-  { resource: 'goal', action: 'delete', scope: 'ORG', description: 'Delete organization goals' },
+  { key: 'goal.create', resource: 'goal', action: 'create', description: 'Create goals' },
+  { key: 'goal.read', resource: 'goal', action: 'read', description: 'View goals' },
+  { key: 'goal.update', resource: 'goal', action: 'update', description: 'Update goals' },
+  { key: 'goal.delete', resource: 'goal', action: 'delete', description: 'Delete goals' },
 
   // Review Management
-  { resource: 'review', action: 'create', scope: 'TEAM', description: 'Create team reviews' },
-  { resource: 'review', action: 'read', scope: 'ORG', description: 'View all reviews' },
-  { resource: 'review', action: 'read', scope: 'TEAM', description: 'View team reviews' },
-  { resource: 'review', action: 'read', scope: 'SELF', description: 'View own reviews' },
-  { resource: 'review', action: 'update', scope: 'TEAM', description: 'Update team reviews' },
-  { resource: 'review', action: 'update', scope: 'SELF', description: 'Update own reviews' },
+  { key: 'review.create', resource: 'review', action: 'create', description: 'Create reviews' },
+  { key: 'review.read', resource: 'review', action: 'read', description: 'View reviews' },
+  { key: 'review.update', resource: 'review', action: 'update', description: 'Update reviews' },
+  { key: 'review.delete', resource: 'review', action: 'delete', description: 'Delete reviews' },
 
   // Assessment Management
-  { resource: 'assessment', action: 'create', scope: 'SELF', description: 'Create self assessments' },
-  { resource: 'assessment', action: 'read', scope: 'ORG', description: 'View all assessments' },
-  { resource: 'assessment', action: 'read', scope: 'TEAM', description: 'View team assessments' },
-  { resource: 'assessment', action: 'read', scope: 'SELF', description: 'View own assessments' },
+  { key: 'assessment.create', resource: 'assessment', action: 'create', description: 'Create assessments' },
+  { key: 'assessment.read', resource: 'assessment', action: 'read', description: 'View assessments' },
+  { key: 'assessment.update', resource: 'assessment', action: 'update', description: 'Update assessments' },
 
   // Workflow Management
-  { resource: 'workflow', action: 'read', scope: 'ORG', description: 'View workflows' },
-  { resource: 'workflow', action: 'read', scope: 'SELF', description: 'View own workflows' },
+  { key: 'workflow.read', resource: 'workflow', action: 'read', description: 'View workflows' },
+  { key: 'workflow.execute', resource: 'workflow', action: 'execute', description: 'Execute workflows' },
 ];
 
-// Define role permission mappings
+// Define role permission mappings (using permission keys)
 const ROLE_PERMISSIONS = {
   ADMIN: [
-    // Full access to all resources at ORG level
-    'role:create:ORG',
-    'role:read:ORG',
-    'role:update:ORG',
-    'role:delete:ORG',
-    'role:assign_permissions:ORG',
-    'permission:read:ORG',
-    'staff:invite:ORG',
-    'staff:read:ORG',
-    'staff:update:ORG',
-    'staff:remove:ORG',
-    'audit:read:ORG',
-    'audit:export:ORG',
-    'competency:create:ORG',
-    'competency:read:ORG',
-    'competency:update:ORG',
-    'competency:delete:ORG',
-    'role_profile:create:ORG',
-    'role_profile:read:ORG',
-    'role_profile:update:ORG',
-    'role_profile:delete:ORG',
-    'goal:create:ORG',
-    'goal:read:ORG',
-    'goal:update:ORG',
-    'goal:delete:ORG',
-    'review:read:ORG',
-    'assessment:read:ORG',
-    'workflow:read:ORG',
+    // Full access to all resources
+    'role.create',
+    'role.read',
+    'role.update',
+    'role.delete',
+    'role.assign_permissions',
+    'permission.read',
+    'staff.invite',
+    'staff.read',
+    'staff.update',
+    'staff.remove',
+    'audit.read',
+    'audit.export',
+    'competency.create',
+    'competency.read',
+    'competency.update',
+    'competency.delete',
+    'role_profile.create',
+    'role_profile.read',
+    'role_profile.update',
+    'role_profile.delete',
+    'goal.create',
+    'goal.read',
+    'goal.update',
+    'goal.delete',
+    'review.create',
+    'review.read',
+    'review.update',
+    'review.delete',
+    'assessment.read',
+    'assessment.update',
+    'workflow.read',
+    'workflow.execute',
   ],
   DEPARTMENT_HEAD: [
-    // Team-level permissions
-    'competency:read:ORG',
-    'competency:read:TEAM',
-    'role_profile:read:ORG',
-    'role_profile:read:TEAM',
-    'goal:create:TEAM',
-    'goal:read:ORG',
-    'goal:read:TEAM',
-    'goal:update:TEAM',
-    'review:create:TEAM',
-    'review:read:TEAM',
-    'review:update:TEAM',
-    'assessment:read:TEAM',
-    'workflow:read:ORG',
+    // Department-level permissions
+    'competency.read',
+    'role_profile.read',
+    'goal.create',
+    'goal.read',
+    'goal.update',
+    'review.create',
+    'review.read',
+    'review.update',
+    'assessment.read',
+    'workflow.read',
   ],
   MANAGER: [
-    // Team-level permissions for managers
-    'competency:read:TEAM',
-    'role_profile:read:TEAM',
-    'goal:create:TEAM',
-    'goal:read:TEAM',
-    'goal:update:TEAM',
-    'review:create:TEAM',
-    'review:read:TEAM',
-    'review:update:TEAM',
-    'assessment:read:TEAM',
+    // Manager permissions
+    'competency.read',
+    'role_profile.read',
+    'goal.create',
+    'goal.read',
+    'goal.update',
+    'review.create',
+    'review.read',
+    'review.update',
+    'assessment.read',
   ],
   EMPLOYEE: [
-    // Self-service permissions
-    'competency:read:SELF',
-    'role_profile:read:SELF',
-    'goal:create:SELF',
-    'goal:read:SELF',
-    'goal:update:SELF',
-    'review:read:SELF',
-    'review:update:SELF',
-    'assessment:create:SELF',
-    'assessment:read:SELF',
-    'workflow:read:SELF',
+    // Employee self-service permissions
+    'competency.read',
+    'role_profile.read',
+    'goal.create',
+    'goal.read',
+    'goal.update',
+    'review.read',
+    'assessment.create',
+    'assessment.read',
+    'workflow.read',
   ],
   REVIEWER: [
-    // Review-focused permissions
-    'competency:read:TEAM',
-    'role_profile:read:TEAM',
-    'goal:read:TEAM',
-    'review:create:TEAM',
-    'review:read:TEAM',
-    'review:update:TEAM',
-    'assessment:read:TEAM',
+    // Reviewer permissions
+    'competency.read',
+    'role_profile.read',
+    'goal.read',
+    'review.create',
+    'review.read',
+    'review.update',
+    'assessment.read',
   ],
 };
 
@@ -176,26 +164,21 @@ async function main() {
   for (const perm of PERMISSIONS) {
     const permission = await prisma.permission.upsert({
       where: {
-        resource_action_scope: {
-          resource: perm.resource,
-          action: perm.action,
-          scope: perm.scope,
-        },
+        key: perm.key,
       },
       update: {
         description: perm.description,
       },
       create: {
+        key: perm.key,
         resource: perm.resource,
         action: perm.action,
-        scope: perm.scope,
         description: perm.description,
       },
     });
 
-    const key = `${perm.resource}:${perm.action}:${perm.scope}`;
-    permissionMap.set(key, permission.id);
-    console.log(`  ✓ ${key}`);
+    permissionMap.set(perm.key, permission.id);
+    console.log(`  ✓ ${perm.key}`);
   }
 
   console.log(`\n✅ Created ${permissionMap.size} permissions\n`);
