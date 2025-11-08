@@ -372,9 +372,28 @@ Return the response as a JSON array with this structure:
     try {
       const competency = await CompetencyService.getCompetencyById(competencyId, tenantId);
 
-      // Get proficiency levels for this competency
-      if (!competency.proficiencyLevels || competency.proficiencyLevels.length === 0) {
-        throw new Error('Competency must have proficiency levels before generating assessment questions');
+      let proficiencyLevels = competency.proficiencyLevels;
+
+      if (!proficiencyLevels || proficiencyLevels.length === 0) {
+        aiLogger.warn('Competency missing proficiency levels, auto-generating defaults', {
+          competencyId,
+        });
+
+        const generatedLevels = await this.generateProficiencyLevels(
+          competencyId,
+          tenantId,
+          userId,
+          4
+        );
+
+        await CompetencyService.createProficiencyLevels(
+          competencyId,
+          tenantId,
+          generatedLevels
+        );
+
+        const refreshed = await CompetencyService.getCompetencyById(competencyId, tenantId);
+        proficiencyLevels = refreshed.proficiencyLevels;
       }
 
       // Normalize questionsPerLevel to an object format
@@ -398,13 +417,15 @@ Return the response as a JSON array with this structure:
       };
 
       // Target the 4 main proficiency levels
-      const targetLevels = ['Basic', 'Proficient', 'Advanced', 'Expert'];
-      const levelsToGenerate = competency.proficiencyLevels
-        .filter(level => targetLevels.some(target => level.name.toLowerCase().includes(target.toLowerCase())))
+      const preferredLevelNames = ['basic', 'intermediate', 'proficient', 'advanced', 'expert'];
+      let levelsToGenerate = proficiencyLevels
+        .filter(level =>
+          preferredLevelNames.some(target => level.name.toLowerCase().includes(target))
+        )
         .sort((a, b) => a.numericLevel - b.numericLevel);
 
       if (levelsToGenerate.length === 0) {
-        throw new Error('Competency must have Basic, Proficient, Advanced, and Expert proficiency levels');
+        levelsToGenerate = proficiencyLevels.sort((a, b) => a.numericLevel - b.numericLevel);
       }
 
       const allQuestions: Array<{
