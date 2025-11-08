@@ -178,7 +178,7 @@ export class OrganizationalGoalsController {
 
   /**
    * Create organizational goal
-   */
+  */
   static async createGoal(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
