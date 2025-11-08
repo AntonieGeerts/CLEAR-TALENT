@@ -925,6 +925,7 @@ const AssessmentQuestionsModal: React.FC<{
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
+  const [generatedAssessment, setGeneratedAssessment] = useState<any | null>(null);
   const [scoringSystems, setScoringSystems] = useState<any[]>([]);
   const [selectedScoringSystem, setSelectedScoringSystem] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -945,6 +946,10 @@ const AssessmentQuestionsModal: React.FC<{
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    setGeneratedAssessment(null);
+  }, [competency.id]);
 
   const loadQuestions = async () => {
     try {
@@ -980,7 +985,8 @@ const AssessmentQuestionsModal: React.FC<{
     setIsGenerating(true);
 
     try {
-      await apiService.generateAssessmentQuestions(competency.id, count, true);
+      const result = await apiService.generateAssessmentQuestions(competency.id, count, true);
+      setGeneratedAssessment(result?.data || null);
       await loadQuestions(); // Reload to show saved questions
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to generate assessment questions');
@@ -1077,11 +1083,51 @@ const AssessmentQuestionsModal: React.FC<{
           </div>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {error}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+
+      {generatedAssessment && (
+        <div className="card bg-primary-50 border border-primary-100 mb-6">
+          <h3 className="text-lg font-semibold text-primary-900 mb-2">
+            Latest AI Assessment Structure
+          </h3>
+          <p className="text-sm text-primary-800 mb-4">
+            {generatedAssessment.competency}: {generatedAssessment.description}
+          </p>
+          <div className="space-y-4">
+            {generatedAssessment.levels?.map((level: any) => (
+              <div key={level.proficiencyLevelId} className="bg-white rounded-lg border border-primary-100 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm uppercase text-primary-600 font-semibold">
+                      {level.level_name}
+                    </p>
+                    <p className="text-gray-700 text-sm">{level.level_description}</p>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {level.behavioral_indicators?.length || 0} indicators
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {level.behavioral_indicators?.map((indicator: any, idx: number) => (
+                    <div key={idx} className="p-3 rounded border border-primary-50 bg-primary-25">
+                      <p className="text-sm text-gray-900 mb-2">{indicator.statement}</p>
+                      <ol className="list-decimal list-inside text-xs text-gray-700 space-y-1">
+                        {indicator.answer_options?.map((option: string, optionIdx: number) => (
+                          <li key={optionIdx}>{option}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
         {/* Existing Questions */}
         {isLoading ? (
