@@ -2078,6 +2078,23 @@ const AssessmentTab: React.FC<{ competencies: Competency[] }> = ({ competencies 
                 </button>
               ))}
             </div>
+            {ratingOptions.length > 0 && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                  Scale details
+                </p>
+                <ol className="space-y-2 text-sm text-gray-700 list-decimal ml-4">
+                  {ratingOptions.map((option) => (
+                    <li key={`descriptor-${currentQuestion.id}-${option.value}`}>
+                      <span className="font-semibold text-primary-700 mr-2">
+                        {option.value}.
+                      </span>
+                      {option.label}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
 
           {/* Optional Comment */}
