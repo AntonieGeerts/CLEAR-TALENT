@@ -114,10 +114,11 @@ export class AIController {
 
   /**
    * Generate assessment questions for a competency
+   * Generates questions for each proficiency level (Basic, Proficient, Advanced, Expert)
    */
   static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
     const { id } = req.params;
-    const { count = 5, autoSave = true } = req.body;
+    const { questionsPerLevel = 3, autoSave = true } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
 
@@ -125,7 +126,7 @@ export class AIController {
       id,
       tenantId,
       userId,
-      count
+      questionsPerLevel
     );
 
     // Auto-save questions to database if requested
@@ -135,11 +136,13 @@ export class AIController {
         '../services/competency/question-service'
       );
 
-      // Map AI-generated types to QuestionType enum
+      // Map AI-generated questions with proficiency level and rating options
       const mappedQuestions = questions.map((q: any) => ({
         statement: q.statement,
         type: AIController.mapQuestionType(q.type),
         examples: q.examples || [],
+        proficiencyLevelId: q.proficiencyLevelId,
+        ratingOptions: q.ratingOptions,
       }));
 
       savedQuestions = await CompetencyQuestionService.bulkCreateQuestions(id, mappedQuestions);
@@ -148,7 +151,7 @@ export class AIController {
     res.json({
       success: true,
       data: savedQuestions,
-      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved' : 'generated'}`,
+      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved for proficiency levels' : 'generated'}`,
       timestamp: new Date().toISOString(),
     });
   }

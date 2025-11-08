@@ -229,71 +229,128 @@ export class AICompetencyService {
 
   /**
    * Generate assessment questions/statements for a competency
+   * Generates questions for each proficiency level (Basic, Proficient, Advanced, Expert)
    */
   static async generateAssessmentQuestions(
     competencyId: string,
     tenantId: string,
     userId: string,
-    count: number = 5
+    questionsPerLevel: number = 3
   ) {
     try {
       const competency = await CompetencyService.getCompetencyById(competencyId, tenantId);
 
+      // Get proficiency levels for this competency
+      if (!competency.proficiencyLevels || competency.proficiencyLevels.length === 0) {
+        throw new Error('Competency must have proficiency levels before generating assessment questions');
+      }
+
       aiLogger.info('Generating assessment questions', {
         competencyId,
         competencyName: competency.name,
-        count,
+        questionsPerLevel,
+        proficiencyLevels: competency.proficiencyLevels.length,
       });
 
-      const prompt = `Generate ${count} assessment questions/statements for evaluating the following competency in performance reviews:
+      // Define the standard rating options
+      const ratingOptions = {
+        "1": "Never Demonstrated",
+        "2": "Sometimes Demonstrated",
+        "3": "Consistently Demonstrated",
+        "4": "Consistently demonstrated + shows evidence of higher level application"
+      };
+
+      // Target the 4 main proficiency levels
+      const targetLevels = ['Basic', 'Proficient', 'Advanced', 'Expert'];
+      const levelsToGenerate = competency.proficiencyLevels
+        .filter(level => targetLevels.some(target => level.name.toLowerCase().includes(target.toLowerCase())))
+        .sort((a, b) => a.numericLevel - b.numericLevel);
+
+      if (levelsToGenerate.length === 0) {
+        throw new Error('Competency must have Basic, Proficient, Advanced, and Expert proficiency levels');
+      }
+
+      const allQuestions: Array<{
+        statement: string;
+        type: 'behavioral' | 'outcome' | 'frequency';
+        examples: string[];
+        proficiencyLevelId: string;
+        proficiencyLevelName: string;
+        ratingOptions: typeof ratingOptions;
+      }> = [];
+
+      // Generate questions for each proficiency level
+      for (const level of levelsToGenerate) {
+        const prompt = `Generate ${questionsPerLevel} assessment questions/behavioral indicators for evaluating the "${level.name}" proficiency level of the following competency:
 
 Competency: ${competency.name}
 Type: ${competency.type}
 Category: ${competency.category}
 Description: ${competency.description}
 
-Generate clear, behaviorally-anchored statements that can be used to assess this competency. Each statement should:
-1. Be specific and observable
-2. Focus on behaviors, not personality traits
-3. Be measurable on a rating scale (e.g., 1-5)
-4. Use action verbs
-5. Be relevant to workplace situations
+Proficiency Level: ${level.name} (Level ${level.numericLevel})
+Level Description: ${level.description}
+
+Generate clear, behaviorally-anchored statements that assess behaviors at the ${level.name} level. Each statement should:
+1. Be specific and observable behaviors appropriate for the ${level.name} level
+2. Focus on actions and outcomes, not personality traits
+3. Use action verbs (e.g., "Delivers", "Demonstrates", "Applies", "Creates")
+4. Be relevant to workplace situations
+5. Clearly distinguish ${level.name} level performance from other levels
+
+Each statement will be rated using this scale:
+- Option 1: Never Demonstrated
+- Option 2: Sometimes Demonstrated
+- Option 3: Consistently Demonstrated
+- Option 4: Consistently demonstrated + shows evidence of higher level application
 
 Return the response as a JSON array with this structure:
 [
   {
-    "statement": "The assessment statement",
-    "type": "behavioral" | "outcome" | "frequency",
-    "examples": ["Example 1", "Example 2"]
+    "statement": "The behavioral indicator statement (e.g., 'Tailors and delivers high-level presentations to diverse audiences using variety of communication tools')",
+    "type": "BEHAVIORAL",
+    "examples": ["Example of this behavior in practice"]
   }
 ]`;
 
-      const response = await this.orchestrator.generateCompletion(
-        prompt,
-        {
-          tenantId,
-          userId,
-          module: 'competency',
-          action: 'generate-assessment-questions',
-        },
-        {
-          temperature: 0.7,
-          maxTokens: 2000,
-        }
-      );
+        const response = await this.orchestrator.generateCompletion(
+          prompt,
+          {
+            tenantId,
+            userId,
+            module: 'competency',
+            action: `generate-assessment-questions-${level.name.toLowerCase()}`,
+          },
+          {
+            temperature: 0.7,
+            maxTokens: 1500,
+          }
+        );
 
-      const questions = this.orchestrator.parseJSONResponse<Array<{
-        statement: string;
-        type: 'behavioral' | 'outcome' | 'frequency';
-        examples: string[];
-      }>>(response);
+        const levelQuestions = this.orchestrator.parseJSONResponse<Array<{
+          statement: string;
+          type: 'behavioral' | 'outcome' | 'frequency';
+          examples: string[];
+        }>>(response);
 
-      aiLogger.info('Assessment questions generated', {
+        // Add proficiency level info and rating options to each question
+        const questionsWithLevel = levelQuestions.map(q => ({
+          ...q,
+          proficiencyLevelId: level.id,
+          proficiencyLevelName: level.name,
+          ratingOptions,
+        }));
+
+        allQuestions.push(...questionsWithLevel);
+      }
+
+      aiLogger.info('Assessment questions generated for all levels', {
         competencyId,
-        count: questions.length,
+        totalQuestions: allQuestions.length,
+        levelsProcessed: levelsToGenerate.length,
       });
 
-      return questions;
+      return allQuestions;
     } catch (error) {
       aiLogger.error('Failed to generate assessment questions', {
         error: error instanceof Error ? error.message : 'Unknown error',
