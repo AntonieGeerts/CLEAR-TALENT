@@ -115,7 +115,6 @@ async function main() {
         userId: adminUser.id,
         primaryRoleId: tenantOwnerRole.id,
         status: 'ACTIVE',
-        joinedAt: new Date(),
       },
     });
     console.log('✓ Created membership for admin user');
@@ -136,7 +135,6 @@ async function main() {
         userId: hrUser.id,
         primaryRoleId: hrAdminRole.id,
         status: 'ACTIVE',
-        joinedAt: new Date(),
       },
     });
     console.log('✓ Created membership for HR user');
