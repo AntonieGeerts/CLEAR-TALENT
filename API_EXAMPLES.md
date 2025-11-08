@@ -7,6 +7,8 @@ Complete examples for all Stage 1 API endpoints.
 - [Authentication](#authentication)
 - [Competency Management](#competency-management)
 - [AI-Powered Features](#ai-powered-features)
+- [Staff Dashboard Data](#staff-dashboard-data)
+- [Learning & Development Plans](#learning--development-plans)
 - [Error Handling](#error-handling)
 
 ---
@@ -398,6 +400,67 @@ Response:
   }
 }
 ```
+
+## Staff Dashboard Data
+
+| Feature | Endpoint | Notes |
+| --- | --- | --- |
+| Personal goals | `GET /api/v1/goals` | Returns the authenticated employee's goals; privileged roles can pass `employeeId`. |
+| Goal stats | `GET /api/v1/goals/stats` | Aggregated counts (draft/active/completed/cancelled/archived). |
+| Assessments | `GET /api/v1/assessments/my-assessments` | Chronological log of competency/self assessments. |
+| Feedback insights | `GET /api/v1/workflows/feedback/analyze/:employeeId` | AI-powered sentiment/themes for recent feedback. |
+| Development plans **(new)** | `GET /api/v1/idps` | Lists IDPs for the requester (or the whole tenant if privileged). |
+| IDP management **(new)** | `POST /api/v1/idps`, `PUT /api/v1/idps/:id`, `DELETE /api/v1/idps/:id` | Create, update, or remove development plans. |
+
+## Learning & Development Plans
+
+### List Plans
+
+```bash
+curl "http://localhost:3000/api/v1/idps?employeeId=USER_ID" \\
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Create a Plan
+
+```bash
+curl -X POST http://localhost:3000/api/v1/idps \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "title": "Leadership Accelerator 2024",
+    "description": "Focus on strategic storytelling",
+    "startDate": "2025-03-01",
+    "targetDate": "2025-06-30",
+    "actions": [
+      { "title": "Shadow ELT QBR", "dueDate": "2025-04-15" }
+    ]
+  }'
+```
+
+### Update a Plan
+
+```bash
+curl -X PUT http://localhost:3000/api/v1/idps/PLAN_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "status": "ACTIVE",
+    "progress": 45,
+    "actions": [
+      { "title": "Shadow ELT QBR", "dueDate": "2025-04-15", "completed": true }
+    ]
+  }'
+```
+
+### Delete a Plan
+
+```bash
+curl -X DELETE http://localhost:3000/api/v1/idps/PLAN_ID \\
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+Responses follow the standard envelope with `success`, `data`, `message`, and `timestamp` fields.
 
 ---
 

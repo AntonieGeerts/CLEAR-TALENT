@@ -10,12 +10,14 @@ export interface ApiResponse<T = any> {
 export interface User {
   id: string;
   email: string;
-  name: string | null;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   role: string;
-  tenantId: string;
-  aiOptOut: boolean;
-  createdAt: string;
-  updatedAt: string;
+  tenantId: string | null;
+  aiOptOut?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Tenant {

@@ -1,21 +1,44 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Shield, Users, FileText, Settings } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Shield,
+  Users,
+  FileText,
+  Settings,
+  UserCircle2,
+  LucideIcon,
+} from 'lucide-react';
 
 interface AdminMenuProps {
   onNavigate?: () => void;
 }
 
+interface AdminMenuItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  match?: (pathname: string, search: string) => boolean;
+}
+
 export const AdminMenu: React.FC<AdminMenuProps> = ({ onNavigate }) => {
   const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isStaffPreview = location.pathname === '/dashboard' && searchParams.get('view') === 'staff';
+  const isAdminRoute = location.pathname.startsWith('/admin/') || isStaffPreview;
 
-  const isAdminRoute = location.pathname.startsWith('/admin/');
-
-  const adminSubItems = [
+  const adminSubItems: AdminMenuItem[] = [
     { to: '/admin/roles', icon: Shield, label: 'Roles & Permissions' },
     { to: '/admin/staff', icon: Users, label: 'Staff Management' },
     { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs' },
+    {
+      to: '/dashboard?view=staff',
+      icon: UserCircle2,
+      label: 'My Staff Dashboard',
+      match: (pathname, search) => pathname === '/dashboard' && new URLSearchParams(search).get('view') === 'staff',
+    },
   ];
 
   const handleToggle = () => {
@@ -30,7 +53,6 @@ export const AdminMenu: React.FC<AdminMenuProps> = ({ onNavigate }) => {
 
   return (
     <div>
-      {/* Main Admin Menu Item */}
       <button
         onClick={handleToggle}
         className={`flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors ${
@@ -46,12 +68,13 @@ export const AdminMenu: React.FC<AdminMenuProps> = ({ onNavigate }) => {
         {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
       </button>
 
-      {/* Submenu Items */}
       {isOpen && (
         <div className="ml-4 mt-1 space-y-1">
           {adminSubItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.to;
+            const isActive = item.match
+              ? item.match(location.pathname, location.search)
+              : location.pathname === item.to;
             return (
               <Link
                 key={item.to}

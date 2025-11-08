@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { StaffDashboard } from './StaffDashboard';
 import { apiService } from '../services/api';
 import {
   BookOpen,
@@ -11,6 +12,16 @@ import {
   Sparkles,
   ArrowRight,
 } from 'lucide-react';
+
+const ADMIN_ROLES = [
+  'ADMIN',
+  'SYSTEM_ADMIN',
+  'TENANT_OWNER',
+  'HR_ADMIN',
+  'HR_MANAGER',
+  'MANAGER',
+  'LINE_MANAGER',
+];
 
 const quickActions = [
   {
@@ -57,7 +68,7 @@ interface DashboardStats {
   idps: number;
 }
 
-export const Dashboard: React.FC = () => {
+const AdminDashboardContent: React.FC = () => {
   const { user, tenant } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     competencies: 0,
@@ -96,7 +107,6 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Welcome Section */}
       <div className="card">
         <div className="flex items-start justify-between">
           <div>
@@ -114,7 +124,6 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card">
           <div className="flex items-center justify-between">
@@ -173,7 +182,6 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -208,7 +216,6 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Features Highlight */}
       <div className="card bg-gradient-to-r from-primary-500 to-primary-600 text-white">
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 bg-white bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -241,6 +248,64 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+export const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const roleKey = (user?.role || '').toUpperCase();
+  const isAdmin = ADMIN_ROLES.includes(roleKey);
+  const searchParams = new URLSearchParams(location.search);
+  const requestedView = searchParams.get('view') === 'staff' ? 'staff' : 'admin';
+  const defaultView = isAdmin ? requestedView : 'staff';
+  const [viewMode, setViewMode] = useState<'admin' | 'staff'>(defaultView);
+
+  useEffect(() => {
+    setViewMode(defaultView);
+  }, [defaultView]);
+
+  const handleViewChange = (mode: 'admin' | 'staff') => {
+    if (!isAdmin) return;
+    setViewMode(mode);
+    const search = mode === 'staff' ? '?view=staff' : '';
+    navigate({ pathname: location.pathname, search }, { replace: true });
+  };
+
+  if (!isAdmin) {
+    return <StaffDashboard />;
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-end">
+        <div className="inline-flex rounded-full bg-white border border-gray-200 shadow-sm p-1">
+          <button
+            onClick={() => handleViewChange('admin')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-full transition ${
+              viewMode === 'admin'
+                ? 'bg-primary-600 text-white shadow'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Admin overview
+          </button>
+          <button
+            onClick={() => handleViewChange('staff')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-full transition ${
+              viewMode === 'staff'
+                ? 'bg-primary-600 text-white shadow'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            My staff view
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'admin' ? <AdminDashboardContent /> : <StaffDashboard isPreview />}
     </div>
   );
 };

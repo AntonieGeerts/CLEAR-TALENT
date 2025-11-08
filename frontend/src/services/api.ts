@@ -263,6 +263,11 @@ class ApiService {
     return response.data;
   }
 
+  async getGoalStats() {
+    const response = await this.api.get('/goals/stats');
+    return response.data;
+  }
+
   async generateGoals(data: {
     employeeId: string;
     roleContext?: string;
@@ -300,7 +305,6 @@ class ApiService {
     const response = await this.api.delete(`/goals/${id}`);
     return response.data;
   }
-
   // Skill Gaps
   async analyzeSkillGaps(data: {
     employeeId: string;
@@ -357,6 +361,11 @@ class ApiService {
     feedbackTexts: string[];
   }) {
     const response = await this.api.post('/ai/sentiment-analysis', data);
+    return response.data;
+  }
+
+  async getFeedbackInsights(employeeId: string) {
+    const response = await this.api.get(`/workflows/feedback/analyze/${employeeId}`);
     return response.data;
   }
 
