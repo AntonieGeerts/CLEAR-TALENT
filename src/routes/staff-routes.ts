@@ -74,8 +74,9 @@ router.post(
 );
 
 // All routes below require authentication and tenant context
+// Allow system admins to manage staff across all tenants
 router.use(authenticate);
-router.use(tenantContext());
+router.use(tenantContext({ allowSystemAdmin: true }));
 
 /**
  * GET /api/v1/staff

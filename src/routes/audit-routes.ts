@@ -18,8 +18,9 @@ const router = Router();
 const auditService = new AuditService();
 
 // All routes require authentication and tenant context
+// Allow system admins to view audit logs across all tenants
 router.use(authenticate);
-router.use(tenantContext());
+router.use(tenantContext({ allowSystemAdmin: true }));
 
 /**
  * GET /api/v1/audit/logs
