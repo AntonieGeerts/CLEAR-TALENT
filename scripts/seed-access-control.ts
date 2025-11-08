@@ -210,21 +210,29 @@ async function main() {
     // 2. Seed System Roles (no tenant - system-wide)
     console.log('🎭 Seeding system roles...');
     for (const roleData of SYSTEM_ROLES) {
-      await prisma.role.upsert({
+      // Use findFirst + create/update pattern for null tenantId (upsert doesn't work with null in composite unique)
+      const existingRole = await prisma.role.findFirst({
         where: {
-          tenantId_key: {
-            tenantId: null,
-            key: roleData.key,
-          },
-        },
-        update: {},
-        create: {
-          ...roleData,
-          tenantId: null, // System roles have no tenant
+          key: roleData.key,
+          tenantId: null,
         },
       });
+
+      if (existingRole) {
+        // Role already exists, skip
+        console.log(`  ⏭️  ${roleData.name} already exists, skipping`);
+      } else {
+        // Create new system role
+        await prisma.role.create({
+          data: {
+            ...roleData,
+            tenantId: null, // System roles have no tenant
+          },
+        });
+        console.log(`  ✅ Created ${roleData.name}`);
+      }
     }
-    console.log(`✅ Created ${SYSTEM_ROLES.length} system roles\n`);
+    console.log(`✅ Completed system roles seeding\n`);
 
     // 3. Seed Role-Permission Mappings (system-wide)
     console.log('🔗 Seeding role-permission mappings...');
