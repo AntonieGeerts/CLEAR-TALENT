@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Target, Sparkles, Plus, Edit, Trash2, Loader, Users } from 'lucide-react';
+import { KPI } from '../types';
+import { KPIList } from '../components/KPIList';
 
 interface Goal {
   id: string;
@@ -20,6 +22,10 @@ interface Goal {
     description: string;
     progress: number;
   }[];
+  metadata?: {
+    kpis?: KPI[];
+    [key: string]: any;
+  };
 }
 
 export const Goals: React.FC = () => {
@@ -133,8 +139,13 @@ export const Goals: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {goals.map((goal) => (
-            <div key={goal.id} className="card hover:shadow-lg transition-shadow">
+          {goals.map((goal) => {
+            const kpis = Array.isArray(goal.metadata?.kpis)
+              ? (goal.metadata!.kpis as KPI[])
+              : [];
+
+            return (
+              <div key={goal.id} className="card hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
@@ -214,13 +225,24 @@ export const Goals: React.FC = () => {
                 </div>
               )}
 
+              {kpis.length > 0 && (
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700">KPIs</h4>
+                    <span className="text-xs text-gray-500">{kpis.length} total</span>
+                  </div>
+                  <KPIList kpis={kpis} />
+                </div>
+              )}
+
               {goal.targetDate && (
                 <div className="text-xs text-gray-500 mt-4">
                   Target: {new Date(goal.targetDate).toLocaleDateString()}
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

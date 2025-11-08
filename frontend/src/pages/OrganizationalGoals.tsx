@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Target, Plus, Edit2, Sparkles, Loader, Zap, Trash2 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { KPI } from '../types';
+import { KPIList } from '../components/KPIList';
 
 interface OrganizationalGoal {
   id: string;
@@ -23,6 +25,13 @@ interface OrganizationalGoal {
   };
   _count?: {
     children: number;
+  };
+  metadata?: {
+    kpis?: KPI[];
+    kpisGeneratedAt?: string;
+    kpisGeneratedBy?: string;
+    bscPerspective?: string;
+    [key: string]: any;
   };
 }
 
@@ -366,6 +375,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onAddChild, onEdit, onGenerat
 
   const levelColor = levelColors[goal.level];
   const levelBadgeColor = levelBadgeColors[goal.level];
+  const kpis = Array.isArray(goal.metadata?.kpis) ? (goal.metadata!.kpis as KPI[]) : [];
 
   return (
     <div className={`border rounded-lg p-4 ${levelColor} hover:shadow-md transition-all`}>
@@ -437,6 +447,15 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onAddChild, onEdit, onGenerat
           </button>
         </div>
       </div>
+      {kpis.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-800">KPIs</span>
+            <span className="text-xs text-gray-600">{kpis.length} tracked</span>
+          </div>
+          <KPIList kpis={kpis} />
+        </div>
+      )}
     </div>
   );
 };
