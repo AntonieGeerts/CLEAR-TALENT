@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { Competency } from '../types';
 import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCircle, Info } from 'lucide-react';
@@ -6,6 +6,13 @@ import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCir
 type TabType = 'competencies' | 'questions' | 'assessment';
 
 type RatingOptionField = { key: string; label: string };
+type CategoryType = 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL';
+type CategorySelection = {
+  id: string;
+  category: CategoryType;
+  categoryName: string;
+  count: number;
+};
 
 const DEFAULT_RATING_OPTION_FIELDS: RatingOptionField[] = [
   { key: '1', label: 'Never Demonstrated' },
@@ -13,6 +20,33 @@ const DEFAULT_RATING_OPTION_FIELDS: RatingOptionField[] = [
   { key: '3', label: 'Consistently Demonstrated' },
   { key: '4', label: 'Consistently Demonstrated + shows evidence of higher-level application' },
 ];
+
+const CATEGORY_CONFIG: Record<CategoryType, { label: string; description: string }> = {
+  CORE: {
+    label: 'Core Competencies',
+    description:
+      'Core competencies are fundamental skills and behaviors essential for all employees across the organization, such as Customer Orientation, Personal Accountability, Work Standard Compliance, Communication, and Teamwork.',
+  },
+  LEADERSHIP: {
+    label: 'Leadership Competencies',
+    description:
+      'Leadership competencies are skills required for managing and leading teams, including Strategic Thinking, Business Acumen, Managing Performance, and Empowering Others.',
+  },
+  FUNCTIONAL: {
+    label: 'Functional Competencies',
+    description:
+      'Functional competencies are role-specific technical skills and knowledge required to perform specific job functions effectively.',
+  },
+};
+
+const createSelectionId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+const buildCategorySelection = (category: CategoryType = 'CORE'): CategorySelection => ({
+  id: createSelectionId(),
+  category,
+  categoryName: CATEGORY_CONFIG[category].label,
+  count: 5,
+});
 
 const DEFAULT_RATING_OPTION_RECORD = DEFAULT_RATING_OPTION_FIELDS.reduce<Record<string, string>>((acc, option) => {
   acc[option.key] = option.label;
@@ -659,8 +693,9 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
   onClose,
   onSuccess,
 }) => {
-  const [category, setCategory] = useState<'CORE' | 'LEADERSHIP' | 'FUNCTIONAL'>('CORE');
-  const [count, setCount] = useState(5);
+  const [categorySelections, setCategorySelections] = useState<CategorySelection[]>([
+    buildCategorySelection(),
+  ]);
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState('');
@@ -672,16 +707,50 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
   const [generatedCompetencies, setGeneratedCompetencies] = useState<any[]>([]);
   const [selectedCompetencies, setSelectedCompetencies] = useState<Set<number>>(new Set());
 
-  const categoryDescriptions = {
-    CORE: 'Core competencies are fundamental skills and behaviors essential for all employees across the organization, such as Customer Orientation, Personal Accountability, Work Standard Compliance, Communication, and Teamwork.',
-    LEADERSHIP: 'Leadership competencies are skills required for managing and leading teams, including Strategic Thinking, Business Acumen, Managing Performance, and Empowering Others.',
-    FUNCTIONAL: 'Functional competencies are role-specific technical skills and knowledge required to perform specific job functions effectively.',
+  const canEditSelections = !isGenerating && generatedCompetencies.length === 0;
+  const totalRequested = useMemo(
+    () => categorySelections.reduce((sum, selection) => sum + (selection.count || 0), 0),
+    [categorySelections]
+  );
+
+  const groupedCompetencies = useMemo<Record<string, { type?: string; items: Array<{ comp: any; index: number }> }>>(
+    () =>
+      generatedCompetencies.reduce((groups, comp, index) => {
+        const key = comp._categoryName || comp.category || 'Uncategorized';
+        if (!groups[key]) {
+          groups[key] = { type: comp._categoryType || comp.type, items: [] };
+        }
+        groups[key].items.push({ comp, index });
+        return groups;
+      }, {} as Record<string, { type?: string; items: Array<{ comp: any; index: number }> }>),
+    [generatedCompetencies]
+  );
+
+  const updateSelection = (id: string, updates: Partial<CategorySelection>) => {
+    setCategorySelections((prev) =>
+      prev.map((selection) => (selection.id === id ? { ...selection, ...updates } : selection))
+    );
+  };
+
+  const handleCategoryTypeChange = (id: string, newCategory: CategoryType) => {
+    const defaultLabel = CATEGORY_CONFIG[newCategory].label;
+    updateSelection(id, {
+      category: newCategory,
+      categoryName: defaultLabel,
+    });
+  };
+
+  const addCategorySelection = () => {
+    setCategorySelections((prev) => [...prev, buildCategorySelection()]);
+  };
+
+  const removeCategorySelection = (id: string) => {
+    setCategorySelections((prev) => (prev.length === 1 ? prev : prev.filter((selection) => selection.id !== id)));
   };
 
   const handleGenerate = async () => {
     setError('');
 
-    // Validate required fields
     if (!companyName.trim()) {
       setError('Company name is required');
       return;
@@ -690,24 +759,62 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
       setError('Industry is required');
       return;
     }
+    if (categorySelections.length === 0) {
+      setError('Add at least one category to generate competencies.');
+      return;
+    }
+
+    for (const selection of categorySelections) {
+      if (!selection.categoryName.trim()) {
+        setError('Each category selection must include a name.');
+        return;
+      }
+      if (selection.count < 1 || selection.count > 20) {
+        setError('Number of competencies per category must be between 1 and 20.');
+        return;
+      }
+    }
 
     setIsGenerating(true);
     setGeneratedCompetencies([]);
 
     try {
-      const response = await apiService.generateCompetenciesByCategory({
-        category,
-        count,
-        companyContext: {
-          companyName: companyName.trim(),
-          industry: industry.trim(),
-          companySize: companySize || undefined,
-          companyValues: companyValues.trim() || undefined,
-          companyDescription: companyDescription.trim() || undefined,
-        },
-      });
-      setGeneratedCompetencies(response.data || []);
-      setSelectedCompetencies(new Set(response.data?.map((_: any, i: number) => i) || []));
+      const aggregated: any[] = [];
+
+      for (const selection of categorySelections) {
+        const normalizedName = selection.categoryName.trim() || CATEGORY_CONFIG[selection.category].label;
+        const response = await apiService.generateCompetenciesByCategory({
+          category: selection.category,
+          categoryName: normalizedName,
+          categoryDescription: CATEGORY_CONFIG[selection.category].description,
+          count: selection.count,
+          companyContext: {
+            companyName: companyName.trim(),
+            industry: industry.trim(),
+            companySize: companySize || undefined,
+            companyValues: companyValues.trim() || undefined,
+            companyDescription: companyDescription.trim() || undefined,
+          },
+        });
+
+        const generatedForSelection = (response.data || []).map((comp: any) => ({
+          ...comp,
+          type: selection.category,
+          category: normalizedName,
+          _categoryName: normalizedName,
+          _categoryType: selection.category,
+        }));
+
+        aggregated.push(...generatedForSelection);
+      }
+
+      if (aggregated.length === 0) {
+        setError('No competencies were generated. Try adjusting your inputs and run again.');
+        return;
+      }
+
+      setGeneratedCompetencies(aggregated);
+      setSelectedCompetencies(new Set(aggregated.map((_, index) => index)));
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to generate competencies');
     } finally {
@@ -716,13 +823,13 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
   };
 
   const toggleSelection = (index: number) => {
-    const newSelected = new Set(selectedCompetencies);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
+    const updated = new Set(selectedCompetencies);
+    if (updated.has(index)) {
+      updated.delete(index);
     } else {
-      newSelected.add(index);
+      updated.add(index);
     }
-    setSelectedCompetencies(newSelected);
+    setSelectedCompetencies(updated);
   };
 
   const handleSave = async () => {
@@ -730,8 +837,8 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
     setIsSaving(true);
 
     try {
-      const competenciesToSave = generatedCompetencies.filter((_, i) =>
-        selectedCompetencies.has(i)
+      const competenciesToSave = generatedCompetencies.filter((_, index) =>
+        selectedCompetencies.has(index)
       );
 
       for (const comp of competenciesToSave) {
@@ -783,7 +890,7 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
                 onChange={(e) => setCompanyName(e.target.value)}
                 className="input"
                 placeholder="e.g., Acme Corporation"
-                disabled={isGenerating || generatedCompetencies.length > 0}
+                disabled={!canEditSelections}
                 required
               />
             </div>
@@ -798,7 +905,7 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
                 onChange={(e) => setIndustry(e.target.value)}
                 className="input"
                 placeholder="e.g., Technology, Healthcare, Retail"
-                disabled={isGenerating || generatedCompetencies.length > 0}
+                disabled={!canEditSelections}
                 required
               />
             </div>
@@ -810,7 +917,7 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
               value={companySize}
               onChange={(e) => setCompanySize(e.target.value)}
               className="input"
-              disabled={isGenerating || generatedCompetencies.length > 0}
+              disabled={!canEditSelections}
             >
               <option value="">Select size...</option>
               <option value="Small">Small (1-50 employees)</option>
@@ -828,7 +935,7 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
               className="input"
               rows={2}
               placeholder="e.g., Innovation, Customer First, Integrity, Teamwork"
-              disabled={isGenerating || generatedCompetencies.length > 0}
+              disabled={!canEditSelections}
             />
             <p className="text-xs text-gray-500 mt-1">
               List your core values to help AI align competencies with your culture
@@ -843,38 +950,83 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
               className="input"
               rows={3}
               placeholder="Brief description of your company, products/services, and what makes you unique"
-              disabled={isGenerating || generatedCompetencies.length > 0}
+              disabled={!canEditSelections}
             />
           </div>
 
-          <div className="border-t border-gray-200 pt-4">
-            <div>
-              <label className="label">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
-                className="input"
-                disabled={isGenerating || generatedCompetencies.length > 0}
+          <div className="border-t border-gray-200 pt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Category Selections</h3>
+              <button
+                type="button"
+                onClick={addCategorySelection}
+                className="btn btn-secondary text-sm"
+                disabled={!canEditSelections}
               >
-                <option value="CORE">Core Competencies</option>
-                <option value="LEADERSHIP">Leadership Competencies</option>
-                <option value="FUNCTIONAL">Functional Competencies</option>
-              </select>
-              <p className="text-sm text-gray-600 mt-2">{categoryDescriptions[category]}</p>
+                <Plus size={14} className="inline mr-1" /> Add Category
+              </button>
             </div>
-          </div>
-
-          <div>
-            <label className="label">Number of Competencies</label>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={count}
-              onChange={(e) => setCount(parseInt(e.target.value) || 5)}
-              className="input"
-              disabled={isGenerating || generatedCompetencies.length > 0}
-            />
+            {categorySelections.map((selection, index) => (
+              <div key={selection.id} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-gray-900">Category {index + 1}</p>
+                  {categorySelections.length > 1 && canEditSelections && (
+                    <button
+                      type="button"
+                      onClick={() => removeCategorySelection(selection.id)}
+                      className="text-sm text-red-600 hover:text-red-800"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="label">Category Type</label>
+                    <select
+                      value={selection.category}
+                      onChange={(e) => handleCategoryTypeChange(selection.id, e.target.value as CategoryType)}
+                      className="input"
+                      disabled={!canEditSelections}
+                    >
+                      <option value="CORE">Core</option>
+                      <option value="LEADERSHIP">Leadership</option>
+                      <option value="FUNCTIONAL">Functional</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {CATEGORY_CONFIG[selection.category].description}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="label">Category Name</label>
+                    <input
+                      type="text"
+                      value={selection.categoryName}
+                      onChange={(e) => updateSelection(selection.id, { categoryName: e.target.value })}
+                      className="input"
+                      placeholder="e.g., Core Competencies"
+                      disabled={!canEditSelections}
+                    />
+                  </div>
+                  <div>
+                    <label className="label"># of Competencies</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={selection.count}
+                      onChange={(e) => updateSelection(selection.id, { count: parseInt(e.target.value) || 1 })}
+                      className="input"
+                      disabled={!canEditSelections}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <p className="text-sm text-gray-600">
+              Total requested: <span className="font-semibold text-gray-900">{totalRequested}</span> competencies across {categorySelections.length}{' '}
+              category{categorySelections.length === 1 ? '' : 'ies'}.
+            </p>
           </div>
 
           {generatedCompetencies.length === 0 && (
@@ -919,36 +1071,50 @@ const GenerateByCategoryModal: React.FC<{ onClose: () => void; onSuccess: () => 
               </button>
             </div>
 
-            <div className="space-y-3 mb-6">
-              {generatedCompetencies.map((comp, index) => (
-                <div
-                  key={index}
-                  className={`card cursor-pointer border-2 transition-colors ${
-                    selectedCompetencies.has(index)
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => toggleSelection(index)}
-                >
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedCompetencies.has(index)}
-                      onChange={() => toggleSelection(index)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{comp.name}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{comp.description}</p>
-                      <div className="mt-2 flex items-center space-x-2">
-                        <span className="text-xs px-2 py-1 bg-gray-100 rounded">{comp.type}</span>
-                        {comp.category && (
-                          <span className="text-xs px-2 py-1 bg-primary-50 text-primary-700 rounded">
-                            {comp.category}
-                          </span>
-                        )}
-                      </div>
+            <div className="space-y-4 mb-6">
+              {Object.entries(groupedCompetencies).map(([groupName, group]) => (
+                <div key={groupName} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{groupName}</h4>
+                      <p className="text-xs text-gray-600">
+                        {group.items.length} competencies · {group.type || 'Custom'}
+                      </p>
                     </div>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {group.items.map(({ comp, index }) => (
+                      <div
+                        key={`${groupName}-${index}`}
+                        className={`px-4 py-3 cursor-pointer transition-colors ${
+                          selectedCompetencies.has(index)
+                            ? 'bg-primary-50 border-l-4 border-primary-500'
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => toggleSelection(index)}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedCompetencies.has(index)}
+                            onChange={() => toggleSelection(index)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <h5 className="font-semibold text-gray-900">{comp.name}</h5>
+                            <p className="text-sm text-gray-600 mt-1">{comp.description}</p>
+                            <div className="mt-2 flex items-center space-x-2">
+                              <span className="text-xs px-2 py-1 bg-gray-100 rounded">{comp.type}</span>
+                              {comp.category && (
+                                <span className="text-xs px-2 py-1 bg-primary-50 text-primary-700 rounded">
+                                  {comp.category}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

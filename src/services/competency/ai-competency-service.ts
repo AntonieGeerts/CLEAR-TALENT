@@ -483,19 +483,46 @@ Guidelines:
 5. Ensure higher levels demonstrate advanced, strategic, or coaching behaviors.
 6. Keep JSON valid (no trailing commas) and only include the fields shown in the schema.`;
 
-      const response = await this.orchestrator.generateCompletion(
-        prompt,
-        {
-          tenantId,
-          userId,
-          module: 'competency',
-          action: 'generate-assessment-questions-structured',
-        },
-        {
-          temperature: 0.65,
-          maxTokens: 2400,
+      const MAX_GENERATION_ATTEMPTS = 2;
+      let response: string | null = null;
+
+      for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+        try {
+          response = await this.orchestrator.generateCompletion(
+            prompt,
+            {
+              tenantId,
+              userId,
+              module: 'competency',
+              action: 'generate-assessment-questions-structured',
+            },
+            {
+              temperature: 0.65,
+              maxTokens: 2400,
+            }
+          );
+          break;
+        } catch (generationError) {
+          const message = generationError instanceof Error ? generationError.message : 'Unknown error';
+          const isTimeout = message.toLowerCase().includes('timeout');
+
+          aiLogger.warn('Assessment question generation attempt failed', {
+            competencyId,
+            attempt,
+            message,
+          });
+
+          if (attempt === MAX_GENERATION_ATTEMPTS || !isTimeout) {
+            throw generationError;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         }
-      );
+      }
+
+      if (!response) {
+        throw new Error('No response received from AI orchestrator');
+      }
 
       const assessment = this.orchestrator.parseJSONResponse<{
         competency: string;
