@@ -178,9 +178,10 @@ export class OrganizationalGoalsController {
 
   /**
    * Create organizational goal
-   */
+  */
   static async createGoal(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
 
     // Only ADMIN, DEPARTMENT_HEAD, or MANAGER can create org goals
     const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD', 'MANAGER'];
@@ -495,6 +496,7 @@ export class OrganizationalGoalsController {
    */
   static async createGoalsFromAI(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
 
     // Only ADMIN can create strategic goals
     const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD'];
@@ -529,6 +531,7 @@ export class OrganizationalGoalsController {
    */
   static async generateKPIsForGoal(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
 
     const { goalId, goalTitle, goalDescription, additionalContext } = req.body;
 
@@ -611,6 +614,7 @@ export class OrganizationalGoalsController {
    */
   static async updateGoalKPIs(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
     const { id } = req.params;
     const { kpis } = req.body;
 
@@ -743,6 +747,7 @@ export class OrganizationalGoalsController {
    */
   static async createChildGoalsFromAI(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
 
     // Only ADMIN, DEPARTMENT_HEAD, or MANAGER can create goals
     const allowedRoles = ['ADMIN', 'DEPARTMENT_HEAD', 'MANAGER'];
