@@ -103,7 +103,7 @@ export class StaffService {
     email: string;
     expiresAt: Date;
   }> {
-    const { tenantId, email, roleIds, invitedBy, expiresInDays = 7, metadata } = input;
+    const { tenantId, email, roleIds, invitedBy, expiresInDays = 7 } = input;
 
     try {
       // Validate tenant exists
@@ -473,7 +473,7 @@ export class StaffService {
       }
 
       // Update membership
-      const updated = await prisma.tenantUserMembership.update({
+      await prisma.tenantUserMembership.update({
         where: { id: membershipId },
         data: {
           ...(primaryRoleId && { primaryRoleId }),

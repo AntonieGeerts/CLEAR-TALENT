@@ -24,9 +24,10 @@
  */
 
 import { Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import { AuthRequest, AuthorizationError, AuthenticationError } from '../types';
 import { logger } from '../utils/logger';
+import { provisionMembershipForUser } from '../lib/access-control-bootstrap';
 
 const prisma = new PrismaClient();
 
@@ -129,7 +130,7 @@ export function tenantContext(options: TenantContextOptions = {}) {
       }
 
       // Ensure tenant exists and user has active membership
-      const membership = await prisma.tenantUserMembership.findUnique({
+      let membership = await prisma.tenantUserMembership.findUnique({
         where: {
           tenantId_userId: {
             tenantId: user.tenantId,
@@ -140,6 +141,14 @@ export function tenantContext(options: TenantContextOptions = {}) {
           tenant: true,
         },
       });
+
+      if (!membership) {
+        membership = await provisionMembershipForUser(prisma, {
+          id: user.id,
+          tenantId: user.tenantId,
+          role: (user.role as UserRole) || UserRole.EMPLOYEE,
+        });
+      }
 
       if (!membership) {
         throw new AuthorizationError('User membership not found');
@@ -210,10 +219,10 @@ export function validateTenantOwnership(
  *   const filter = getTenantFilter(req);
  *   const competencies = await prisma.competency.findMany({ where: filter });
  */
-export function getTenantFilter(req: AuthRequest): { tenantId: string } | {} {
+export function getTenantFilter(req: AuthRequest): { tenantId: string } | undefined {
   // System admins see all tenants
   if (req.user?.role === 'SYSTEM_ADMIN' && !req.tenant) {
-    return {};
+    return undefined;
   }
 
   // Regular users or system admins with tenant context see only their tenant

@@ -6,6 +6,7 @@ import logger, { apiLogger } from './utils/logger';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { globalRateLimiter } from './middleware/rate-limit';
+import { backfillLegacyMemberships, seedAccessControl } from './lib/access-control-bootstrap';
 
 const app = express();
 
@@ -126,6 +127,25 @@ async function initializeDatabase() {
       }
     } else {
       logger.info(`✅ Database ready (${userCount} users found)`);
+    }
+
+    try {
+      await seedAccessControl(prisma, message => logger.info(`🔐 ${message}`));
+    } catch (seedError: any) {
+      logger.error('Failed to ensure access control defaults', {
+        error: seedError.message,
+      });
+    }
+
+    try {
+      const created = await backfillLegacyMemberships(prisma);
+      if (created === 0) {
+        logger.info('✅ Tenant memberships already in sync');
+      }
+    } catch (membershipError: any) {
+      logger.error('Failed to backfill tenant memberships', {
+        error: membershipError.message,
+      });
     }
 
     await prisma.$disconnect();

@@ -150,7 +150,7 @@ export class AuthService {
   static verifyToken(token: string): TokenPayload {
     try {
       return jwt.verify(token, config.jwt.secret) as TokenPayload;
-    } catch (error) {
+    } catch {
       throw new AuthenticationError('Invalid or expired token');
     }
   }
@@ -198,7 +198,7 @@ export class AuthService {
       });
 
       return { token };
-    } catch (error) {
+    } catch {
       throw new AuthenticationError('Invalid refresh token');
     }
   }

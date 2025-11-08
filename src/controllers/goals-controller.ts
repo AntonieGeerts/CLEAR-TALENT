@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../types';
-import { ValidationError, AuthorizationError, NotFoundError } from '../types';
+import { ValidationError, NotFoundError } from '../types';
 
 const prisma = new PrismaClient();
 
