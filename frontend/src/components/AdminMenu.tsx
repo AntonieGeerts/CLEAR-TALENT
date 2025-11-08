@@ -7,7 +7,6 @@ import {
   Users,
   FileText,
   Settings,
-  UserCircle2,
   LucideIcon,
 } from 'lucide-react';
 
@@ -25,20 +24,12 @@ interface AdminMenuItem {
 export const AdminMenu: React.FC<AdminMenuProps> = ({ onNavigate }) => {
   const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isStaffPreview = location.pathname === '/dashboard' && searchParams.get('view') === 'staff';
-  const isAdminRoute = location.pathname.startsWith('/admin/') || isStaffPreview;
+  const isAdminRoute = location.pathname.startsWith('/admin/');
 
   const adminSubItems: AdminMenuItem[] = [
     { to: '/admin/roles', icon: Shield, label: 'Roles & Permissions' },
     { to: '/admin/staff', icon: Users, label: 'Staff Management' },
     { to: '/admin/audit-logs', icon: FileText, label: 'Audit Logs' },
-    {
-      to: '/dashboard?view=staff',
-      icon: UserCircle2,
-      label: 'My Staff Dashboard',
-      match: (pathname, search) => pathname === '/dashboard' && new URLSearchParams(search).get('view') === 'staff',
-    },
   ];
 
   const handleToggle = () => {

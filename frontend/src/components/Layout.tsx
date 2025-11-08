@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from './Logo';
 import { Footer } from './Footer';
@@ -17,39 +17,80 @@ import {
   Building2,
   AlertTriangle,
   FlagTriangleRight,
+  LucideIcon,
 } from 'lucide-react';
 
-const getNavItems = (userRole: string | undefined) => {
-  const items = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['*'] },
-  ];
+interface NavItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  match?: (pathname: string, search: string) => boolean;
+}
 
-  // System Admin menu
-  if (userRole === 'SYSTEM_ADMIN') {
-    items.push(
-      { to: '/admin', icon: Building2, label: 'Tenant Management', roles: ['SYSTEM_ADMIN'] },
-    );
-  }
+const ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/organizational-goals', icon: FlagTriangleRight, label: 'Organizational Goals' },
+  { to: '/competencies', icon: BookOpen, label: 'Competency Library' },
+  { to: '/roles', icon: Briefcase, label: 'Role Profiles' },
+  { to: '/goals', icon: Target, label: 'Goals & OKRs' },
+  { to: '/pips', icon: AlertTriangle, label: 'PIPs' },
+  { to: '/skill-gaps', icon: TrendingUp, label: 'Skill Gaps' },
+  { to: '/idps', icon: GraduationCap, label: 'IDPs' },
+];
 
-  // Common items for all authenticated users
-  items.push(
-    { to: '/organizational-goals', icon: FlagTriangleRight, label: 'Organizational Goals', roles: ['*'] },
-    { to: '/competencies', icon: BookOpen, label: 'Competency Library', roles: ['*'] },
-    { to: '/roles', icon: Briefcase, label: 'Role Profiles', roles: ['*'] },
-    { to: '/goals', icon: Target, label: 'Goals & OKRs', roles: ['*'] },
-    { to: '/pips', icon: AlertTriangle, label: 'PIPs', roles: ['*'] },
-    { to: '/skill-gaps', icon: TrendingUp, label: 'Skill Gaps', roles: ['*'] },
-    { to: '/idps', icon: GraduationCap, label: 'IDPs', roles: ['*'] },
-  );
+const STAFF_NAV_ITEMS: NavItem[] = [
+  {
+    to: '/dashboard?view=staff',
+    icon: LayoutDashboard,
+    label: 'My Dashboard',
+    match: (pathname: string, search: string) =>
+      pathname === '/dashboard' && new URLSearchParams(search).get('view') === 'staff',
+  },
+  { to: '/goals', icon: Target, label: 'My Goals' },
+  { to: '/idps', icon: GraduationCap, label: 'Development Plan' },
+  { to: '/competencies', icon: BookOpen, label: 'Competency Library' },
+];
 
-  return items;
-};
+const ADMIN_ROLES = new Set([
+  'ADMIN',
+  'SYSTEM_ADMIN',
+  'TENANT_OWNER',
+  'HR_ADMIN',
+  'HR_MANAGER',
+  'DEPARTMENT_HEAD',
+  'MANAGER',
+]);
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, tenant, logout } = useAuth();
   const location = useLocation();
-  const navItems = getNavItems(user?.role);
+  const navigate = useNavigate();
+  const isAdminRole = ADMIN_ROLES.has((user?.role || '').toUpperCase());
+  const isStaffView = useMemo(() => {
+    if (!isAdminRole) return true;
+    const params = new URLSearchParams(location.search);
+    return params.get('view') === 'staff';
+  }, [isAdminRole, location.search]);
+
+  const adminNavItems = useMemo(() => {
+    const base = [...ADMIN_NAV_ITEMS];
+    if (user?.role === 'SYSTEM_ADMIN') {
+      base.splice(1, 0, { to: '/admin', icon: Building2, label: 'Tenant Management' });
+    }
+    return base;
+  }, [user?.role]);
+
+  const navItems = isStaffView ? STAFF_NAV_ITEMS : adminNavItems;
+
+  const handleViewToggle = () => {
+    if (!isAdminRole) return;
+    if (isStaffView) {
+      navigate({ pathname: '/dashboard', search: '' });
+    } else {
+      navigate({ pathname: '/dashboard', search: '?view=staff' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -75,7 +116,9 @@ export const Layout: React.FC = () => {
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.to;
+              const isActive = item.match
+                ? item.match(location.pathname, location.search)
+                : location.pathname === item.to;
               return (
                 <Link
                   key={item.to}
@@ -94,7 +137,7 @@ export const Layout: React.FC = () => {
             })}
 
             {/* Organizational Admin Menu */}
-            {user?.role === 'ADMIN' && (
+            {isAdminRole && !isStaffView && (
               <AdminMenu onNavigate={() => setSidebarOpen(false)} />
             )}
           </nav>
@@ -129,6 +172,18 @@ export const Layout: React.FC = () => {
           </button>
           <div className="flex-1" />
           <div className="flex items-center space-x-4">
+            {isAdminRole && (
+              <button
+                onClick={handleViewToggle}
+                className={`hidden sm:inline-flex items-center px-4 py-2 text-sm font-medium rounded-full border transition ${
+                  isStaffView
+                    ? 'border-primary-600 text-primary-700 bg-primary-50 hover:bg-primary-100'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {isStaffView ? 'Exit Staff View' : 'Switch to Staff View'}
+              </button>
+            )}
             <span className="text-sm text-gray-600">
               {new Date().toLocaleDateString('en-US', {
                 weekday: 'long',
