@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -115,7 +116,6 @@ async function main() {
         userId: adminUser.id,
         primaryRoleId: tenantOwnerRole.id,
         status: 'ACTIVE',
-        joinedAt: new Date(),
       },
     });
     console.log('✓ Created membership for admin user');
@@ -136,7 +136,6 @@ async function main() {
         userId: hrUser.id,
         primaryRoleId: hrAdminRole.id,
         status: 'ACTIVE',
-        joinedAt: new Date(),
       },
     });
     console.log('✓ Created membership for HR user');
@@ -726,15 +725,24 @@ for each employee:
     },
   ];
 
-  // Create scoring systems for demo tenant
+  // Create or update scoring systems for demo tenant
   for (const system of scoringSystems) {
-    await prisma.scoringSystem.create({
-      data: {
+    await prisma.scoringSystem.upsert({
+      where: {
+        tenantId_systemId: {
+          tenantId: demoTenant.id,
+          systemId: system.systemId,
+        },
+      },
+      create: {
         tenantId: demoTenant.id,
         ...system,
       },
+      update: {
+        ...system,
+      },
     });
-    console.log(`✓ Created scoring system: ${system.name}`);
+    console.log(`✓ Created/updated scoring system: ${system.name}`);
   }
 
   // Set weighted_likert as the default scoring system
