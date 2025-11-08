@@ -22,6 +22,17 @@ interface Goal {
   }[];
 }
 
+interface OrgGoalWithKPIs {
+  id: string;
+  title: string;
+  level: 'ORGANIZATIONAL' | 'DEPARTMENTAL' | 'TEAM' | 'INDIVIDUAL';
+  description?: string;
+  metadata?: {
+    kpis?: KPI[];
+    [key: string]: any;
+  };
+}
+
 export const Goals: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,9 +41,13 @@ export const Goals: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [error, setError] = useState('');
+  const [orgGoalsWithKPIs, setOrgGoalsWithKPIs] = useState<OrgGoalWithKPIs[]>([]);
+  const [orgKpiLoading, setOrgKpiLoading] = useState(true);
+  const [orgKpiError, setOrgKpiError] = useState('');
 
   useEffect(() => {
     loadGoals();
+    loadOrganizationalKPIs();
   }, []);
 
   const loadGoals = async () => {
@@ -44,6 +59,30 @@ export const Goals: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to load goals');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadOrganizationalKPIs = async () => {
+    try {
+      setOrgKpiLoading(true);
+      setOrgKpiError('');
+      const response = await apiService.getOrganizationalGoalsByLevel();
+      const { organizational = [], departmental = [], team = [], individual = [] } = response || {};
+      const flattened: OrgGoalWithKPIs[] = [...organizational, ...departmental, ...team, ...individual]
+        .filter((goal: any) => Array.isArray(goal?.metadata?.kpis) && goal.metadata.kpis.length > 0)
+        .map((goal: any) => ({
+          id: goal.id,
+          title: goal.title,
+          level: goal.level,
+          description: goal.description,
+          metadata: goal.metadata,
+        }));
+      setOrgGoalsWithKPIs(flattened);
+    } catch (err: any) {
+      console.error('Failed to load organizational KPIs:', err);
+      setOrgKpiError(err.response?.data?.error || 'Unable to load organizational KPIs');
+    } finally {
+      setOrgKpiLoading(false);
     }
   };
 
@@ -223,6 +262,55 @@ export const Goals: React.FC = () => {
           ))}
         </div>
       )}
+
+      <div className="mt-10 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Organizational KPIs</h2>
+            <p className="text-gray-600 text-sm">
+              View the measurable KPIs generated for top-level goals across the organization.
+            </p>
+          </div>
+        </div>
+
+        {orgKpiLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader className="animate-spin text-primary-600" size={28} />
+          </div>
+        ) : orgKpiError ? (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {orgKpiError}
+          </div>
+        ) : orgGoalsWithKPIs.length === 0 ? (
+          <div className="card text-center py-8">
+            <p className="text-gray-600">
+              No KPIs available yet. Generate KPIs from the Organizational Goals workspace to see them here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {orgGoalsWithKPIs.map((goal) => (
+              <div key={goal.id} className="card border border-gray-200">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      {goal.level}
+                    </p>
+                    <h3 className="text-lg font-semibold text-gray-900">{goal.title}</h3>
+                    {goal.description && (
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{goal.description}</p>
+                    )}
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                    KPIs
+                  </span>
+                </div>
+                <KPIList kpis={(goal.metadata?.kpis || []) as KPI[]} maxCollapsed={2} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {showCreateModal && (
         <GoalModal
