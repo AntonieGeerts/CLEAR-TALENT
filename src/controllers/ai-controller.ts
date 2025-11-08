@@ -82,24 +82,55 @@ export class AIController {
   }
 
   /**
-   * Generate competencies by category
+   * Generate custom competency category names based on company context
    */
-  static async generateByCategory(req: AuthRequest, res: Response) {
-    const { category, count = 5, companyContext } = req.body;
+  static async generateCategories(req: AuthRequest, res: Response) {
+    const { companyContext, count = 6 } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
 
-    if (!['CORE', 'LEADERSHIP', 'FUNCTIONAL'].includes(category)) {
+    if (!companyContext?.companyName || !companyContext?.industry) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid category. Must be CORE, LEADERSHIP, or FUNCTIONAL',
+        error: 'companyContext with companyName and industry is required',
+      });
+    }
+
+    const categories = await AICompetencyService.generateCompetencyCategories(
+      tenantId,
+      userId,
+      companyContext,
+      count
+    );
+
+    res.json({
+      success: true,
+      data: categories,
+      message: `${categories.length} custom competency categories generated for ${companyContext.companyName}`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Generate competencies by category (supports custom category names)
+   */
+  static async generateByCategory(req: AuthRequest, res: Response) {
+    const { categoryName, categoryDescription, count = 5, companyContext } = req.body;
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    if (!categoryName) {
+      return res.status(400).json({
+        success: false,
+        error: 'categoryName is required',
       });
     }
 
     const competencies = await AICompetencyService.generateCompetenciesByCategory(
       tenantId,
       userId,
-      category,
+      categoryName,
+      categoryDescription,
       count,
       companyContext
     );
@@ -107,7 +138,7 @@ export class AIController {
     res.json({
       success: true,
       data: competencies,
-      message: `${competencies.length} ${category} competencies generated`,
+      message: `${competencies.length} competencies generated for "${categoryName}" category`,
       timestamp: new Date().toISOString(),
     });
   }
