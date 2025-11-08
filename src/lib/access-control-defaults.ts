@@ -29,10 +29,10 @@ export interface RolePermissionDefinition {
 }
 
 export const PERMISSIONS: PermissionDefinition[] = [
-  { key: 'staff.view', resource: 'staff', action: 'view', description: 'View staff members' },
-  { key: 'staff.manage', resource: 'staff', action: 'manage', description: 'Create, update, and manage staff members' },
+  { key: 'staff.read', resource: 'staff', action: 'read', description: 'View staff members' },
   { key: 'staff.invite', resource: 'staff', action: 'invite', description: 'Invite new staff members' },
-  { key: 'staff.deactivate', resource: 'staff', action: 'deactivate', description: 'Deactivate staff members' },
+  { key: 'staff.update', resource: 'staff', action: 'update', description: 'Update staff membership' },
+  { key: 'staff.remove', resource: 'staff', action: 'remove', description: 'Deactivate or remove staff members' },
   { key: 'role.read', resource: 'role', action: 'read', description: 'View roles and permissions' },
   { key: 'role.create', resource: 'role', action: 'create', description: 'Create custom roles' },
   { key: 'role.update', resource: 'role', action: 'update', description: 'Update custom roles' },
@@ -55,7 +55,8 @@ export const PERMISSIONS: PermissionDefinition[] = [
   { key: 'feedback.give', resource: 'feedback', action: 'give', description: 'Give feedback to others' },
   { key: 'reports.view', resource: 'reports', action: 'view', description: 'View reports and analytics' },
   { key: 'reports.export', resource: 'reports', action: 'export', description: 'Export reports and data' },
-  { key: 'audit_logs.view', resource: 'audit_logs', action: 'view', description: 'View audit logs' },
+  { key: 'audit.read', resource: 'audit', action: 'read', description: 'View audit logs' },
+  { key: 'audit.export', resource: 'audit', action: 'export', description: 'Export audit logs' },
 ];
 
 export const SYSTEM_ROLE_DEFINITIONS: Record<SystemRoleKey, SystemRoleDefinition> = {
@@ -93,10 +94,10 @@ export const SYSTEM_ROLE_DEFINITIONS: Record<SystemRoleKey, SystemRoleDefinition
 
 export const ROLE_PERMISSIONS: Record<SystemRoleKey, RolePermissionDefinition[]> = {
   TENANT_OWNER: [
-    { permissionKey: 'staff.view', scope: ORG },
-    { permissionKey: 'staff.manage', scope: ORG },
+    { permissionKey: 'staff.read', scope: ORG },
     { permissionKey: 'staff.invite', scope: ORG },
-    { permissionKey: 'staff.deactivate', scope: ORG },
+    { permissionKey: 'staff.update', scope: ORG },
+    { permissionKey: 'staff.remove', scope: ORG },
     { permissionKey: 'role.read', scope: ORG },
     { permissionKey: 'role.create', scope: ORG },
     { permissionKey: 'role.update', scope: ORG },
@@ -119,12 +120,13 @@ export const ROLE_PERMISSIONS: Record<SystemRoleKey, RolePermissionDefinition[]>
     { permissionKey: 'feedback.give', scope: ORG },
     { permissionKey: 'reports.view', scope: ORG },
     { permissionKey: 'reports.export', scope: ORG },
-    { permissionKey: 'audit_logs.view', scope: ORG },
+    { permissionKey: 'audit.read', scope: ORG },
+    { permissionKey: 'audit.export', scope: ORG },
   ],
   HR_ADMIN: [
-    { permissionKey: 'staff.view', scope: ORG },
-    { permissionKey: 'staff.manage', scope: ORG },
+    { permissionKey: 'staff.read', scope: ORG },
     { permissionKey: 'staff.invite', scope: ORG },
+    { permissionKey: 'staff.update', scope: ORG },
     { permissionKey: 'role.read', scope: ORG },
     { permissionKey: 'role.create', scope: ORG },
     { permissionKey: 'role.update', scope: ORG },
@@ -143,9 +145,10 @@ export const ROLE_PERMISSIONS: Record<SystemRoleKey, RolePermissionDefinition[]>
     { permissionKey: 'feedback.view', scope: ORG },
     { permissionKey: 'reports.view', scope: ORG },
     { permissionKey: 'reports.export', scope: ORG },
+    { permissionKey: 'audit.read', scope: ORG },
   ],
   LINE_MANAGER: [
-    { permissionKey: 'staff.view', scope: TEAM },
+    { permissionKey: 'staff.read', scope: TEAM },
     { permissionKey: 'performance_reviews.view', scope: TEAM },
     { permissionKey: 'performance_reviews.conduct', scope: TEAM },
     { permissionKey: 'goals.view', scope: TEAM },
@@ -169,7 +172,7 @@ export const ROLE_PERMISSIONS: Record<SystemRoleKey, RolePermissionDefinition[]>
     { permissionKey: 'competencies.view', scope: ORG },
   ],
   READ_ONLY: [
-    { permissionKey: 'staff.view', scope: ORG },
+    { permissionKey: 'staff.read', scope: ORG },
     { permissionKey: 'performance_reviews.view', scope: ORG },
     { permissionKey: 'goals.view', scope: ORG },
     { permissionKey: 'competencies.view', scope: ORG },
