@@ -46,6 +46,14 @@ export interface RegisterData {
 }
 
 // Competency Types
+export interface ProficiencyLevelSummary {
+  id: string;
+  name: string;
+  numericLevel: number;
+  sortOrder?: number;
+  description?: string;
+}
+
 export interface Competency {
   id: string;
   tenantId: string;
@@ -57,6 +65,7 @@ export interface Competency {
   sourceJobDescription: string | null;
   createdAt: string;
   updatedAt: string;
+  proficiencyLevels?: ProficiencyLevelSummary[];
 }
 
 export interface CompetencyLevel {

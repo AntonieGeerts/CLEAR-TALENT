@@ -23,13 +23,29 @@ export class CompetencyQuestionController {
    */
   static async create(req: AuthRequest, res: Response) {
     const { competencyId } = req.params;
-    const { statement, type, examples } = req.body;
+    const {
+      statement,
+      type,
+      examples,
+      proficiencyLevelId,
+      ratingOptions,
+      weight,
+      scoreMin,
+      scoreMax,
+      scoringSystemId,
+    } = req.body;
 
     const question = await CompetencyQuestionService.createQuestion(competencyId, {
       statement,
       type,
       examples,
       aiGenerated: false,
+      proficiencyLevelId,
+      ratingOptions,
+      weight,
+      scoreMin,
+      scoreMax,
+      scoringSystemId,
     });
 
     apiLogger.info('Question created', {
@@ -49,12 +65,28 @@ export class CompetencyQuestionController {
    */
   static async update(req: AuthRequest, res: Response) {
     const { id } = req.params;
-    const { statement, type, examples } = req.body;
+    const {
+      statement,
+      type,
+      examples,
+      proficiencyLevelId,
+      ratingOptions,
+      weight,
+      scoreMin,
+      scoreMax,
+      scoringSystemId,
+    } = req.body;
 
     const question = await CompetencyQuestionService.updateQuestion(id, {
       statement,
       type,
       examples,
+      proficiencyLevelId,
+      ratingOptions,
+      weight,
+      scoreMin,
+      scoreMax,
+      scoringSystemId,
     });
 
     apiLogger.info('Question updated', {

@@ -130,6 +130,12 @@ class ApiService {
     statement: string;
     type: 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE';
     examples?: string[];
+    proficiencyLevelId?: string | null;
+    ratingOptions?: Record<string, string>;
+    weight?: number;
+    scoreMin?: number;
+    scoreMax?: number;
+    scoringSystemId?: string | null;
   }) {
     const response = await this.api.post(`/competencies/${competencyId}/questions`, data);
     return response.data;
@@ -139,6 +145,12 @@ class ApiService {
     statement?: string;
     type?: 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE';
     examples?: string[];
+    proficiencyLevelId?: string | null;
+    ratingOptions?: Record<string, string>;
+    weight?: number;
+    scoreMin?: number;
+    scoreMax?: number;
+    scoringSystemId?: string | null;
   }) {
     const response = await this.api.put(`/competencies/questions/${questionId}`, data);
     return response.data;
