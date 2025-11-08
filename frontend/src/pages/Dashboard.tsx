@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { StaffDashboard } from './StaffDashboard';
 import { apiService } from '../services/api';
@@ -255,57 +255,14 @@ const AdminDashboardContent: React.FC = () => {
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const roleKey = (user?.role || '').toUpperCase();
   const isAdmin = ADMIN_ROLES.includes(roleKey);
   const searchParams = new URLSearchParams(location.search);
-  const requestedView = searchParams.get('view') === 'staff' ? 'staff' : 'admin';
-  const defaultView = isAdmin ? requestedView : 'staff';
-  const [viewMode, setViewMode] = useState<'admin' | 'staff'>(defaultView);
+  const isStaffView = !isAdmin || searchParams.get('view') === 'staff';
 
-  useEffect(() => {
-    setViewMode(defaultView);
-  }, [defaultView]);
-
-  const handleViewChange = (mode: 'admin' | 'staff') => {
-    if (!isAdmin) return;
-    setViewMode(mode);
-    const search = mode === 'staff' ? '?view=staff' : '';
-    navigate({ pathname: location.pathname, search }, { replace: true });
-  };
-
-  if (!isAdmin) {
-    return <StaffDashboard />;
+  if (isStaffView) {
+    return <StaffDashboard isPreview={isAdmin} />;
   }
 
-  return (
-    <div className="space-y-8">
-      <div className="flex justify-end">
-        <div className="inline-flex rounded-full bg-white border border-gray-200 shadow-sm p-1">
-          <button
-            onClick={() => handleViewChange('admin')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-full transition ${
-              viewMode === 'admin'
-                ? 'bg-primary-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Admin overview
-          </button>
-          <button
-            onClick={() => handleViewChange('staff')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-full transition ${
-              viewMode === 'staff'
-                ? 'bg-primary-600 text-white shadow'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            My staff view
-          </button>
-        </div>
-      </div>
-
-      {viewMode === 'admin' ? <AdminDashboardContent /> : <StaffDashboard isPreview />}
-    </div>
-  );
+  return <AdminDashboardContent />;
 };
