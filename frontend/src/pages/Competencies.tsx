@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Competency } from '../types';
-import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCircle } from 'lucide-react';
+import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCircle, Info } from 'lucide-react';
 
 type TabType = 'competencies' | 'questions' | 'assessment';
 
@@ -1410,7 +1410,12 @@ const AssessmentQuestionsModal: React.FC<{
                               {index + 1}
                             </span>
                             <div className="flex-1">
-                              <p className="text-gray-900 mb-2">{q.statement}</p>
+                              <p
+                                className="text-gray-900 mb-2"
+                                title={q.examples?.[0] || undefined}
+                              >
+                                {q.statement}
+                              </p>
                               <div className="flex items-center space-x-2 mb-2">
                                 <span className="text-xs px-2 py-1 bg-gray-100 rounded capitalize">
                                   {q.type.toLowerCase()}
@@ -2031,9 +2036,19 @@ const AssessmentTab: React.FC<{ competencies: Competency[] }> = ({ competencies 
             <span className="inline-block px-3 py-1 text-sm font-medium rounded-full bg-primary-100 text-primary-800 mb-4">
               {currentQuestion.competencyName}
             </span>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {currentQuestion.statement}
-            </h2>
+            <div className="flex items-start space-x-2 mb-2">
+              <h2
+                className="text-xl font-bold text-gray-900"
+                title={currentQuestion.examples?.[0] || undefined}
+              >
+                {currentQuestion.statement}
+              </h2>
+              {currentQuestion.examples && currentQuestion.examples.length > 0 && (
+                <span className="mt-1" title={currentQuestion.examples[0]}>
+                  <Info size={16} className="text-gray-400 cursor-help" />
+                </span>
+              )}
+            </div>
             {currentQuestion.proficiencyLevelName && (
               <p className="text-sm text-gray-600 mb-2">
                 Target Level: {currentQuestion.proficiencyLevelName}
