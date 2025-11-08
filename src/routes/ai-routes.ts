@@ -40,6 +40,11 @@ router.post(
 );
 
 router.post(
+  '/competencies/generate-categories',
+  asyncHandler(AIController.generateCategories)
+);
+
+router.post(
   '/competencies/generate-by-category',
   asyncHandler(AIController.generateByCategory)
 );

@@ -155,12 +155,97 @@ export class AICompetencyService {
   }
 
   /**
-   * Generate competencies by category (Core, Leadership, Functional)
+   * Generate custom competency category names based on company context
+   */
+  static async generateCompetencyCategories(
+    tenantId: string,
+    userId: string,
+    companyContext: {
+      companyName: string;
+      industry: string;
+      companySize?: string;
+      companyValues?: string;
+      companyDescription?: string;
+    },
+    count: number = 6
+  ) {
+    try {
+      aiLogger.info('Generating custom competency categories', {
+        count,
+        companyContext,
+      });
+
+      const prompt = `Generate ${count} unique, relevant competency category names for the following company:
+
+Company Name: ${companyContext.companyName}
+Industry: ${companyContext.industry}
+${companyContext.companySize ? `Company Size: ${companyContext.companySize}` : ''}
+${companyContext.companyValues ? `Company Values: ${companyContext.companyValues}` : ''}
+${companyContext.companyDescription ? `Description: ${companyContext.companyDescription}` : ''}
+
+Create category names that are:
+1. Specific to the ${companyContext.industry} industry
+2. Aligned with ${companyContext.companyName}'s unique business context
+3. Meaningful for organizing competencies in performance reviews
+4. Professional and clear (2-4 words each)
+5. Not generic categories like "Core" or "Leadership" - be industry-specific
+
+Examples for different industries:
+- Tech Company: "Cloud Architecture", "DevOps Practices", "Product Innovation", "Data Engineering"
+- Healthcare: "Patient Care Excellence", "Clinical Protocols", "Healthcare Compliance", "Medical Technology"
+- Finance: "Risk Management", "Financial Analysis", "Regulatory Compliance", "Client Advisory"
+- Retail: "Customer Experience", "Merchandising Strategy", "Inventory Management", "Sales Excellence"
+
+Return the response as a JSON array with this structure:
+[
+  {
+    "name": "Category Name",
+    "description": "Brief description of what competencies fall under this category",
+    "type": "CORE" | "LEADERSHIP" | "FUNCTIONAL"
+  }
+]`;
+
+      const response = await this.orchestrator.generateCompletion(
+        prompt,
+        {
+          tenantId,
+          userId,
+          module: 'competency',
+          action: 'generate-categories',
+        },
+        {
+          temperature: 0.8,
+          maxTokens: 1500,
+        }
+      );
+
+      const categories = this.orchestrator.parseJSONResponse<Array<{
+        name: string;
+        description: string;
+        type: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL';
+      }>>(response);
+
+      aiLogger.info('Competency categories generated', {
+        count: categories.length,
+      });
+
+      return categories;
+    } catch (error) {
+      aiLogger.error('Failed to generate competency categories', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new AIServiceError('Failed to generate competency categories');
+    }
+  }
+
+  /**
+   * Generate competencies by category (supports both predefined and custom categories)
    */
   static async generateCompetenciesByCategory(
     tenantId: string,
     userId: string,
-    category: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL',
+    categoryName: string,
+    categoryDescription?: string,
     count: number = 5,
     companyContext?: {
       companyName: string;
@@ -172,35 +257,57 @@ export class AICompetencyService {
   ) {
     try {
       aiLogger.info('Generating competencies by category', {
-        category,
+        categoryName,
         count,
         companyContext,
       });
 
-      const categoryDescriptions = {
-        CORE: 'Core competencies are fundamental skills and behaviors essential for all employees across the organization.',
-        LEADERSHIP: 'Leadership competencies are skills required for managing and leading teams effectively.',
-        FUNCTIONAL: 'Functional competencies are role-specific technical skills and knowledge required for particular job functions.',
-      };
+      // Determine competency type based on category name or default to FUNCTIONAL
+      const categoryType = this.inferCompetencyType(categoryName);
 
-      const response = await this.orchestrator.generateFromTemplate(
-        'COMPETENCY',
-        'generate-by-category',
-        {
-          category,
-          categoryDescription: categoryDescriptions[category],
-          count,
-          companyName: companyContext?.companyName || 'Your Organization',
-          industry: companyContext?.industry || 'General Business',
-          companySize: companyContext?.companySize || undefined,
-          companyValues: companyContext?.companyValues || undefined,
-          companyDescription: companyContext?.companyDescription || undefined,
-        },
+      const prompt = `Generate ${count} specific competencies for the "${categoryName}" category for the following company:
+
+Company Name: ${companyContext?.companyName || 'Your Organization'}
+Industry: ${companyContext?.industry || 'General Business'}
+${companyContext?.companySize ? `Company Size: ${companyContext.companySize}` : ''}
+${companyContext?.companyValues ? `Company Values: ${companyContext.companyValues}` : ''}
+${companyContext?.companyDescription ? `Description: ${companyContext.companyDescription}` : ''}
+
+Category: ${categoryName}
+${categoryDescription ? `Category Description: ${categoryDescription}` : ''}
+
+Generate competencies that are:
+1. Specific to the ${categoryName} category
+2. Relevant to the ${companyContext?.industry || 'business'} industry
+3. Measurable and observable in performance reviews
+4. Aligned with ${companyContext?.companyName || 'the organization'}'s context
+5. Professional and actionable
+
+Each competency should have:
+- A clear, specific name (3-6 words)
+- A detailed description of what the competency means
+- The category it belongs to
+
+Return the response as a JSON array with this structure:
+[
+  {
+    "name": "Competency Name",
+    "description": "Detailed description of the competency and what it means in practice",
+    "category": "${categoryName}"
+  }
+]`;
+
+      const response = await this.orchestrator.generateCompletion(
+        prompt,
         {
           tenantId,
           userId,
           module: 'competency',
           action: 'generate-by-category',
+        },
+        {
+          temperature: 0.7,
+          maxTokens: 2000,
         }
       );
 
@@ -211,13 +318,13 @@ export class AICompetencyService {
       }>>(response);
 
       aiLogger.info('Competencies generated by category', {
-        category,
+        categoryName,
         count: competencies.length,
       });
 
       return competencies.map(c => ({
         ...c,
-        type: category,
+        type: categoryType,
       }));
     } catch (error) {
       aiLogger.error('Failed to generate competencies by category', {
@@ -228,14 +335,37 @@ export class AICompetencyService {
   }
 
   /**
+   * Infer competency type from category name
+   */
+  private static inferCompetencyType(categoryName: string): 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL' {
+    const lowerName = categoryName.toLowerCase();
+
+    // Leadership indicators
+    if (lowerName.includes('leadership') || lowerName.includes('management') ||
+        lowerName.includes('strategic') || lowerName.includes('executive')) {
+      return 'LEADERSHIP';
+    }
+
+    // Core indicators
+    if (lowerName.includes('core') || lowerName.includes('fundamental') ||
+        lowerName.includes('values') || lowerName.includes('culture')) {
+      return 'CORE';
+    }
+
+    // Default to functional (technical/industry-specific)
+    return 'FUNCTIONAL';
+  }
+
+  /**
    * Generate assessment questions/statements for a competency
    * Generates questions for each proficiency level (Basic, Proficient, Advanced, Expert)
+   * @param questionsPerLevel - Can be a number (same for all levels) or an object mapping level names to counts
    */
   static async generateAssessmentQuestions(
     competencyId: string,
     tenantId: string,
     userId: string,
-    questionsPerLevel: number = 3
+    questionsPerLevel: number | Record<string, number> = 3
   ) {
     try {
       const competency = await CompetencyService.getCompetencyById(competencyId, tenantId);
@@ -244,6 +374,11 @@ export class AICompetencyService {
       if (!competency.proficiencyLevels || competency.proficiencyLevels.length === 0) {
         throw new Error('Competency must have proficiency levels before generating assessment questions');
       }
+
+      // Normalize questionsPerLevel to an object format
+      const questionCounts = typeof questionsPerLevel === 'number'
+        ? {} // Will use default for all levels
+        : questionsPerLevel;
 
       aiLogger.info('Generating assessment questions', {
         competencyId,
@@ -281,7 +416,16 @@ export class AICompetencyService {
 
       // Generate questions for each proficiency level
       for (const level of levelsToGenerate) {
-        const prompt = `Generate ${questionsPerLevel} assessment questions/behavioral indicators for evaluating the "${level.name}" proficiency level of the following competency:
+        // Determine how many questions to generate for this level
+        const countForLevel = typeof questionsPerLevel === 'number'
+          ? questionsPerLevel
+          : (questionCounts[level.name] || questionCounts[level.name.toLowerCase()] || 3);
+
+        if (countForLevel === 0) {
+          continue; // Skip levels with 0 questions requested
+        }
+
+        const prompt = `Generate ${countForLevel} assessment questions/behavioral indicators for evaluating the "${level.name}" proficiency level of the following competency:
 
 Competency: ${competency.name}
 Type: ${competency.type}
