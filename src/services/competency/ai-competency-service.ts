@@ -368,7 +368,28 @@ Return the response as a JSON array with this structure:
     tenantId: string,
     userId: string,
     questionsPerLevel: number | Record<string, number> = 3
-  ) {
+  ): Promise<{
+    assessment: {
+      competency: string;
+      description: string;
+      levels: Array<{
+        level_name: string;
+        level_description: string;
+        proficiencyLevelId: string;
+        behavioral_indicators: Array<{
+          statement: string;
+          answer_options: string[];
+        }>;
+      }>;
+    };
+    flattenedQuestions: Array<{
+      statement: string;
+      type: 'behavioral' | 'outcome' | 'frequency';
+      examples: string[];
+      proficiencyLevelId: string;
+      ratingOptions: Record<string, string>;
+    }>;
+  }> {
     try {
       const competency = await CompetencyService.getCompetencyById(competencyId, tenantId);
 
@@ -417,7 +438,7 @@ Return the response as a JSON array with this structure:
       };
 
       // Target the 4 main proficiency levels
-      const preferredLevelNames = ['basic', 'intermediate', 'proficient', 'advanced', 'expert'];
+      const preferredLevelNames = ['basic', 'intermediate', 'advanced', 'expert'];
       let levelsToGenerate = proficiencyLevels
         .filter(level =>
           preferredLevelNames.some(target => level.name.toLowerCase().includes(target))
@@ -428,96 +449,131 @@ Return the response as a JSON array with this structure:
         levelsToGenerate = proficiencyLevels.sort((a, b) => a.numericLevel - b.numericLevel);
       }
 
-      const allQuestions: Array<{
-        statement: string;
-        type: 'behavioral' | 'outcome' | 'frequency';
-        examples: string[];
-        proficiencyLevelId: string;
-        proficiencyLevelName: string;
-        ratingOptions: typeof ratingOptions;
-      }> = [];
+      const prompt = `You are designing a competency assessment.
 
-      // Generate questions for each proficiency level
-      for (const level of levelsToGenerate) {
-        // Determine how many questions to generate for this level
-        const countForLevel = typeof questionsPerLevel === 'number'
-          ? questionsPerLevel
-          : (questionCounts[level.name] || questionCounts[level.name.toLowerCase()] || 3);
-
-        if (countForLevel === 0) {
-          continue; // Skip levels with 0 questions requested
-        }
-
-        const prompt = `Generate ${countForLevel} assessment questions/behavioral indicators for evaluating the "${level.name}" proficiency level of the following competency:
-
-Competency: ${competency.name}
-Type: ${competency.type}
+Competency Name: ${competency.name}
+Competency Description: ${competency.description}
+Competency Type: ${competency.type}
 Category: ${competency.category}
-Description: ${competency.description}
 
-Proficiency Level: ${level.name} (Level ${level.numericLevel})
-Level Description: ${level.description}
+Proficiency Levels:
+${levelsToGenerate
+  .map(
+    (level, idx) => `${idx + 1}. ${level.name} (Level ${level.numericLevel}) - ${level.description}`
+  )
+  .join('\n')}
 
-Generate clear, behaviorally-anchored statements that assess behaviors at the ${level.name} level. Each statement should:
-1. Be specific and observable behaviors appropriate for the ${level.name} level
-2. Focus on actions and outcomes, not personality traits
-3. Use action verbs (e.g., "Delivers", "Demonstrates", "Applies", "Creates")
-4. Be relevant to workplace situations
-5. Clearly distinguish ${level.name} level performance from other levels
+Requirement:
+Return JSON matching EXACTLY this schema:
+{
+  "competency": "${competency.name}",
+  "description": "${competency.description}",
+  "levels": [
+    {
+      "level_name": "Basic",
+      "level_description": "",
+      "behavioral_indicators": [
+        {
+          "statement": "",
+          "answer_options": [
+            "Never Demonstrated",
+            "Sometimes Demonstrated",
+            "Consistently Demonstrated",
+            "Consistently Demonstrated + shows evidence of higher-level application"
+          ]
+        }
+      ]
+    }
+  ]
+}
 
-Each statement will be rated using this scale:
-- Option 1: Never Demonstrated
-- Option 2: Sometimes Demonstrated
-- Option 3: Consistently Demonstrated
-- Option 4: Consistently demonstrated + shows evidence of higher level application
+Guidelines:
+1. Provide between ${Array.isArray(questionsPerLevel) ? '2-4' : '3-5'} behavioral indicators per level (or use the specific counts provided).
+2. Wording must be specific, measurable, and performance-based (no vague traits).
+3. Always supply the four standard answer options above for every indicator.
+4. Ensure higher levels demonstrate advanced, strategic, or coaching behaviors.
+5. Keep JSON valid (no trailing commas) and only include the fields shown in the schema.`;
 
-Return the response as a JSON array with this structure:
-[
-  {
-    "statement": "The behavioral indicator statement (e.g., 'Tailors and delivers high-level presentations to diverse audiences using variety of communication tools')",
-    "type": "BEHAVIORAL",
-    "examples": ["Example of this behavior in practice"]
-  }
-]`;
+      const response = await this.orchestrator.generateCompletion(
+        prompt,
+        {
+          tenantId,
+          userId,
+          module: 'competency',
+          action: 'generate-assessment-questions-structured',
+        },
+        {
+          temperature: 0.65,
+          maxTokens: 2400,
+        }
+      );
 
-        const response = await this.orchestrator.generateCompletion(
-          prompt,
-          {
-            tenantId,
-            userId,
-            module: 'competency',
-            action: `generate-assessment-questions-${level.name.toLowerCase()}`,
-          },
-          {
-            temperature: 0.7,
-            maxTokens: 1500,
-          }
-        );
+      const assessment = this.orchestrator.parseJSONResponse<{
+        competency: string;
+        description: string;
+        levels: Array<{
+          level_name: string;
+          level_description: string;
+          behavioral_indicators: Array<{
+            statement: string;
+            answer_options: string[];
+          }>;
+        }>;
+      }>(response);
 
-        const levelQuestions = this.orchestrator.parseJSONResponse<Array<{
-          statement: string;
-          type: 'behavioral' | 'outcome' | 'frequency';
-          examples: string[];
-        }>>(response);
+      const normalizedLevels = assessment.levels.map((level, idx) => {
+        const matchedLevel =
+          levelsToGenerate.find(
+            l => l.name.toLowerCase() === level.level_name.toLowerCase()
+          ) || levelsToGenerate[idx] || levelsToGenerate[levelsToGenerate.length - 1];
 
-        // Add proficiency level info and rating options to each question
-        const questionsWithLevel = levelQuestions.map(q => ({
-          ...q,
-          proficiencyLevelId: level.id,
-          proficiencyLevelName: level.name,
-          ratingOptions,
+        const indicators = level.behavioral_indicators?.length
+          ? level.behavioral_indicators
+          : [];
+
+        const indicatorsWithDefaults = indicators.map(indicator => ({
+          statement: indicator.statement,
+          answer_options:
+            indicator.answer_options?.length === 4
+              ? indicator.answer_options
+              : ['Never Demonstrated', 'Sometimes Demonstrated', 'Consistently Demonstrated', 'Consistently Demonstrated + shows evidence of higher-level application'],
         }));
 
-        allQuestions.push(...questionsWithLevel);
-      }
+        return {
+          level_name: matchedLevel.name,
+          level_description: level.level_description || matchedLevel.description,
+          proficiencyLevelId: matchedLevel.id,
+          behavioral_indicators: indicatorsWithDefaults,
+        };
+      });
+
+      const flattenedQuestions = normalizedLevels.flatMap(level =>
+        level.behavioral_indicators.map(indicator => ({
+          statement: indicator.statement,
+          type: 'behavioral' as const,
+          examples: [],
+          proficiencyLevelId: level.proficiencyLevelId,
+          ratingOptions: indicator.answer_options.reduce<Record<string, string>>((acc, option, idx) => {
+            acc[(idx + 1).toString()] = option;
+            return acc;
+          }, {}),
+        }))
+      );
 
       aiLogger.info('Assessment questions generated for all levels', {
         competencyId,
-        totalQuestions: allQuestions.length,
-        levelsProcessed: levelsToGenerate.length,
+        totalQuestions: flattenedQuestions.length,
+        levelsProcessed: normalizedLevels.length,
       });
 
-      return allQuestions;
+      return {
+        assessment: {
+          competency: competency.name,
+          description: competency.description,
+          levels: normalizedLevels,
+        },
+        flattenedQuestions,
+      };
     } catch (error) {
       aiLogger.error('Failed to generate assessment questions', {
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -232,22 +232,20 @@ export class AIController {
       });
     }
 
-    const questions = await AICompetencyService.generateAssessmentQuestions(
+    const { assessment, flattenedQuestions } = await AICompetencyService.generateAssessmentQuestions(
       id,
       tenantId,
       userId,
       questionsPerLevel
     );
 
-    // Auto-save questions to database if requested
-    let savedQuestions = questions;
+    let savedQuestions = flattenedQuestions;
     if (autoSave) {
       const { CompetencyQuestionService } = await import(
         '../services/competency/question-service'
       );
 
-      // Map AI-generated questions with proficiency level and rating options
-      const mappedQuestions = questions.map((q: any) => ({
+      const mappedQuestions = flattenedQuestions.map((q: any) => ({
         statement: q.statement,
         type: AIController.mapQuestionType(q.type),
         examples: q.examples || [],
@@ -258,21 +256,11 @@ export class AIController {
       savedQuestions = await CompetencyQuestionService.bulkCreateQuestions(id, mappedQuestions);
     }
 
-    // Build summary message
-    const levelCounts = savedQuestions.reduce((acc: Record<string, number>, q: any) => {
-      const levelName = q.proficiencyLevel?.name || 'Unknown';
-      acc[levelName] = (acc[levelName] || 0) + 1;
-      return acc;
-    }, {});
-
     res.json({
       success: true,
-      data: savedQuestions,
-      summary: {
-        total: questions.length,
-        byLevel: levelCounts,
-      },
-      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved for proficiency levels' : 'generated'}`,
+      data: assessment,
+      savedQuestions,
+      message: `${savedQuestions.length} behavioral indicators generated across ${assessment.levels.length} proficiency levels`,
       timestamp: new Date().toISOString(),
     });
   }
