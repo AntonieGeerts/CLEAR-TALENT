@@ -230,12 +230,13 @@ export class AICompetencyService {
   /**
    * Generate assessment questions/statements for a competency
    * Generates questions for each proficiency level (Basic, Proficient, Advanced, Expert)
+   * @param questionsPerLevel - Can be a number (same for all levels) or an object mapping level names to counts
    */
   static async generateAssessmentQuestions(
     competencyId: string,
     tenantId: string,
     userId: string,
-    questionsPerLevel: number = 3
+    questionsPerLevel: number | Record<string, number> = 3
   ) {
     try {
       const competency = await CompetencyService.getCompetencyById(competencyId, tenantId);
@@ -244,6 +245,11 @@ export class AICompetencyService {
       if (!competency.proficiencyLevels || competency.proficiencyLevels.length === 0) {
         throw new Error('Competency must have proficiency levels before generating assessment questions');
       }
+
+      // Normalize questionsPerLevel to an object format
+      const questionCounts = typeof questionsPerLevel === 'number'
+        ? {} // Will use default for all levels
+        : questionsPerLevel;
 
       aiLogger.info('Generating assessment questions', {
         competencyId,
@@ -281,7 +287,16 @@ export class AICompetencyService {
 
       // Generate questions for each proficiency level
       for (const level of levelsToGenerate) {
-        const prompt = `Generate ${questionsPerLevel} assessment questions/behavioral indicators for evaluating the "${level.name}" proficiency level of the following competency:
+        // Determine how many questions to generate for this level
+        const countForLevel = typeof questionsPerLevel === 'number'
+          ? questionsPerLevel
+          : (questionCounts[level.name] || questionCounts[level.name.toLowerCase()] || 3);
+
+        if (countForLevel === 0) {
+          continue; // Skip levels with 0 questions requested
+        }
+
+        const prompt = `Generate ${countForLevel} assessment questions/behavioral indicators for evaluating the "${level.name}" proficiency level of the following competency:
 
 Competency: ${competency.name}
 Type: ${competency.type}

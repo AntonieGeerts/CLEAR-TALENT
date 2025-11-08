@@ -115,12 +115,34 @@ export class AIController {
   /**
    * Generate assessment questions for a competency
    * Generates questions for each proficiency level (Basic, Proficient, Advanced, Expert)
+   *
+   * Request body can be:
+   * 1. { "questionsPerLevel": 3 } - Generate 3 questions for each level
+   * 2. { "questionsPerLevel": { "Basic": 2, "Proficient": 3, "Advanced": 4, "Expert": 5 } } - Specify per level
    */
   static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
     const { id } = req.params;
     const { questionsPerLevel = 3, autoSave = true } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
+
+    // Validate input
+    if (typeof questionsPerLevel === 'object' && questionsPerLevel !== null) {
+      // Validate that all values are positive numbers
+      for (const [level, count] of Object.entries(questionsPerLevel)) {
+        if (typeof count !== 'number' || count < 0) {
+          return res.status(400).json({
+            success: false,
+            error: `Invalid count for level "${level}": must be a non-negative number`,
+          });
+        }
+      }
+    } else if (typeof questionsPerLevel !== 'number' || questionsPerLevel < 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'questionsPerLevel must be a positive number or an object mapping level names to counts',
+      });
+    }
 
     const questions = await AICompetencyService.generateAssessmentQuestions(
       id,
@@ -148,9 +170,20 @@ export class AIController {
       savedQuestions = await CompetencyQuestionService.bulkCreateQuestions(id, mappedQuestions);
     }
 
+    // Build summary message
+    const levelCounts = savedQuestions.reduce((acc: Record<string, number>, q: any) => {
+      const levelName = q.proficiencyLevel?.name || 'Unknown';
+      acc[levelName] = (acc[levelName] || 0) + 1;
+      return acc;
+    }, {});
+
     res.json({
       success: true,
       data: savedQuestions,
+      summary: {
+        total: questions.length,
+        byLevel: levelCounts,
+      },
       message: `${questions.length} assessment questions ${autoSave ? 'generated and saved for proficiency levels' : 'generated'}`,
       timestamp: new Date().toISOString(),
     });
