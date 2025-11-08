@@ -115,30 +115,87 @@ export class AIController {
    * Generate competencies by category (supports custom category names)
    */
   static async generateByCategory(req: AuthRequest, res: Response) {
-    const { categoryName, categoryDescription, count = 5, companyContext } = req.body;
+    const {
+      categoryName,
+      categoryDescription,
+      category,
+      count = 5,
+      companyContext,
+      categoriesCount = 3,
+    } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
 
-    if (!categoryName) {
-      return res.status(400).json({
-        success: false,
-        error: 'categoryName is required',
+    let targetCategories: Array<{ name: string; description?: string; type?: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL' }> = [];
+
+    if (categoryName) {
+      targetCategories = [
+        {
+          name: categoryName,
+          description: categoryDescription,
+          type: category,
+        },
+      ];
+    } else {
+      if (!companyContext?.companyName || !companyContext?.industry) {
+        return res.status(400).json({
+          success: false,
+          error: 'companyContext with companyName and industry is required when categoryName is not provided',
+        });
+      }
+
+      const generatedCategories = await AICompetencyService.generateCompetencyCategories(
+        tenantId,
+        userId,
+        companyContext,
+        categoriesCount
+      );
+
+      const filtered = generatedCategories.filter(cat => !category || cat.type === category);
+      targetCategories = (filtered.length ? filtered : generatedCategories).slice(0, categoriesCount);
+    }
+
+    const competencyGroups = [] as Array<{
+      category: { name: string; description?: string; type?: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL' };
+      competencies: Array<{ name: string; description: string; category: string; type: string }>;
+    }>;
+
+    for (const cat of targetCategories) {
+      const catCompetencies = await AICompetencyService.generateCompetenciesByCategory(
+        tenantId,
+        userId,
+        cat.name,
+        cat.description || categoryDescription,
+        count,
+        companyContext,
+        cat.type || category
+      );
+      competencyGroups.push({
+        category: cat,
+        competencies: catCompetencies.map(comp => ({
+          ...comp,
+          category: cat.name,
+        })),
       });
     }
 
-    const competencies = await AICompetencyService.generateCompetenciesByCategory(
-      tenantId,
-      userId,
-      categoryName,
-      categoryDescription,
-      count,
-      companyContext
-    );
+    const flattened = competencyGroups.flatMap(group => group.competencies);
 
     res.json({
       success: true,
-      data: competencies,
-      message: `${competencies.length} competencies generated for "${categoryName}" category`,
+      data: flattened,
+      metadata: {
+        categories: competencyGroups.map(group => ({
+          name: group.category.name,
+          description: group.category.description,
+          type: group.category.type,
+          count: group.competencies.length,
+        })),
+      },
+      message:
+        flattened.length === 0
+          ? 'No competencies were generated. Try adjusting your company context or category filters.'
+          : `${flattened.length} competencies generated across ${competencyGroups.length} category(ies)`,
       timestamp: new Date().toISOString(),
     });
   }

@@ -253,7 +253,8 @@ Return the response as a JSON array with this structure:
       companySize?: string;
       companyValues?: string;
       companyDescription?: string;
-    }
+    },
+    categoryTypeOverride?: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL'
   ) {
     try {
       aiLogger.info('Generating competencies by category', {
@@ -263,7 +264,7 @@ Return the response as a JSON array with this structure:
       });
 
       // Determine competency type based on category name or default to FUNCTIONAL
-      const categoryType = this.inferCompetencyType(categoryName);
+      const categoryType = categoryTypeOverride ?? this.inferCompetencyType(categoryName);
 
       const prompt = `Generate ${count} specific competencies for the "${categoryName}" category for the following company:
 
@@ -324,6 +325,7 @@ Return the response as a JSON array with this structure:
 
       return competencies.map(c => ({
         ...c,
+        category: c.category || categoryName,
         type: categoryType,
       }));
     } catch (error) {
