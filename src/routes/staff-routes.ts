@@ -107,9 +107,33 @@ router.get(
       offset: offset ? parseInt(offset as string, 10) : 0,
     });
 
+    const staffList = result.members.map(member => ({
+      id: member.membershipId,
+      userId: member.userId,
+      user: {
+        id: member.userId,
+        email: member.email,
+        firstName: member.firstName,
+        lastName: member.lastName,
+      },
+      primaryRole: {
+        id: member.primaryRole.id,
+        name: member.primaryRole.name,
+        key: member.primaryRole.key,
+      },
+      additionalRoles: member.additionalRoles.map(role => ({
+        id: role.id,
+        name: role.name,
+        key: role.key,
+      })),
+      status: member.status,
+      joinedAt: member.createdAt,
+      metadata: member.metadata ?? {},
+    }));
+
     res.json({
       success: true,
-      data: result.members,
+      data: staffList,
       pagination: {
         total: result.total,
         hasMore: result.hasMore,
