@@ -467,7 +467,8 @@ Return JSON matching EXACTLY this schema:
             "Sometimes Demonstrated",
             "Consistently Demonstrated",
             "Consistently Demonstrated + shows evidence of higher-level application"
-          ]
+          ],
+          "illustrative_example": ""
         }
       ]
     }
@@ -476,10 +477,11 @@ Return JSON matching EXACTLY this schema:
 
 Guidelines:
 1. Provide between ${Array.isArray(questionsPerLevel) ? '2-4' : '3-5'} behavioral indicators per level (or use the specific counts provided).
-2. Wording must be specific, measurable, and performance-based (no vague traits).
-3. Always supply the four standard answer options above for every indicator.
-4. Ensure higher levels demonstrate advanced, strategic, or coaching behaviors.
-5. Keep JSON valid (no trailing commas) and only include the fields shown in the schema.`;
+2. Each "statement" must contain two concise sentences: the first states the observable behavior, the second explains the impact on stakeholders, projects, or business outcomes.
+3. Add an "illustrative_example" string for every indicator that gives a brief (<= 30 words) scenario someone could hover to read.
+4. Always supply the four standard answer options above for every indicator.
+5. Ensure higher levels demonstrate advanced, strategic, or coaching behaviors.
+6. Keep JSON valid (no trailing commas) and only include the fields shown in the schema.`;
 
       const response = await this.orchestrator.generateCompletion(
         prompt,
@@ -504,6 +506,7 @@ Guidelines:
           behavioral_indicators: Array<{
             statement: string;
             answer_options: string[];
+            illustrative_example?: string;
           }>;
         }>;
       }>(response);
@@ -520,6 +523,7 @@ Guidelines:
 
         const indicatorsWithDefaults = indicators.map(indicator => ({
           statement: indicator.statement,
+          illustrative_example: indicator.illustrative_example,
           answer_options:
             indicator.answer_options?.length === 4
               ? indicator.answer_options
@@ -538,7 +542,7 @@ Guidelines:
         level.behavioral_indicators.map(indicator => ({
           statement: indicator.statement,
           type: 'behavioral' as const,
-          examples: [],
+          examples: indicator.illustrative_example ? [indicator.illustrative_example] : [],
           proficiencyLevelId: level.proficiencyLevelId,
           ratingOptions: indicator.answer_options.reduce<Record<string, string>>((acc, option, idx) => {
             acc[(idx + 1).toString()] = option;
