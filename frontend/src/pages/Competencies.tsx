@@ -5,6 +5,71 @@ import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCir
 
 type TabType = 'competencies' | 'questions' | 'assessment';
 
+type RatingOptionField = { key: string; label: string };
+
+const DEFAULT_RATING_OPTION_FIELDS: RatingOptionField[] = [
+  { key: '1', label: 'Never Demonstrated' },
+  { key: '2', label: 'Sometimes Demonstrated' },
+  { key: '3', label: 'Consistently Demonstrated' },
+  { key: '4', label: 'Consistently Demonstrated + shows evidence of higher-level application' },
+];
+
+const DEFAULT_RATING_OPTION_RECORD = DEFAULT_RATING_OPTION_FIELDS.reduce<Record<string, string>>((acc, option) => {
+  acc[option.key] = option.label;
+  return acc;
+}, {});
+
+const cloneDefaultRatingOptions = (): RatingOptionField[] =>
+  DEFAULT_RATING_OPTION_FIELDS.map((option) => ({ ...option }));
+
+const normalizeRatingOptionFields = (
+  options?: Record<string, string> | null
+): RatingOptionField[] => {
+  if (!options || typeof options !== 'object') {
+    return cloneDefaultRatingOptions();
+  }
+
+  const entries = Object.entries(options)
+    .filter(([key, value]) => key && typeof value === 'string' && value.trim().length > 0)
+    .sort((a, b) => Number(a[0]) - Number(b[0]));
+
+  if (!entries.length) {
+    return cloneDefaultRatingOptions();
+  }
+
+  return entries.map(([key, value], index) => ({
+    key: key || String(index + 1),
+    label: value.trim(),
+  }));
+};
+
+const serializeRatingOptionFields = (fields: RatingOptionField[]): Record<string, string> => {
+  const trimmed = fields
+    .map((field, index) => ({ key: String(index + 1), label: field.label?.trim() || '' }))
+    .filter((field) => field.label.length > 0);
+
+  if (!trimmed.length) {
+    return { ...DEFAULT_RATING_OPTION_RECORD };
+  }
+
+  return trimmed.reduce<Record<string, string>>((acc, field) => {
+    acc[field.key] = field.label;
+    return acc;
+  }, {});
+};
+
+const getNumericRatingOptions = (
+  options?: Record<string, string> | null
+): Array<{ value: number; label: string }> => {
+  return normalizeRatingOptionFields(options).map((field, index) => ({
+    value: Number(field.key) || index + 1,
+    label: field.label,
+  }));
+};
+
+const MIN_RATING_OPTIONS = 2;
+const MAX_RATING_OPTIONS = 5;
+
 export const Competencies: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('competencies');
   const [competencies, setCompetencies] = useState<Competency[]>([]);
@@ -930,6 +995,7 @@ const AssessmentQuestionsModal: React.FC<{
   const [selectedScoringSystem, setSelectedScoringSystem] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const defaultLevelId = competency.proficiencyLevels?.[0]?.id || '';
   const [newQuestion, setNewQuestion] = useState({
     statement: '',
     type: 'BEHAVIORAL' as 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL' | 'KNOWLEDGE',
@@ -937,6 +1003,8 @@ const AssessmentQuestionsModal: React.FC<{
     weight: 1.0,
     scoreMin: 1,
     scoreMax: 5,
+    proficiencyLevelId: defaultLevelId,
+    ratingOptions: cloneDefaultRatingOptions(),
   });
 
   // Load existing questions and scoring systems on mount
@@ -949,7 +1017,19 @@ const AssessmentQuestionsModal: React.FC<{
 
   useEffect(() => {
     setGeneratedAssessment(null);
-  }, [competency.id]);
+    setEditingQuestion(null);
+    setShowAddForm(false);
+    setNewQuestion({
+      statement: '',
+      type: 'BEHAVIORAL',
+      examples: [''],
+      weight: 1.0,
+      scoreMin: 1,
+      scoreMax: 5,
+      proficiencyLevelId: defaultLevelId,
+      ratingOptions: cloneDefaultRatingOptions(),
+    });
+  }, [competency.id, defaultLevelId]);
 
   const loadQuestions = async () => {
     try {
@@ -1006,6 +1086,11 @@ const AssessmentQuestionsModal: React.FC<{
         statement: newQuestion.statement,
         type: newQuestion.type,
         examples: newQuestion.examples.filter((ex) => ex.trim()),
+        proficiencyLevelId: newQuestion.proficiencyLevelId || null,
+        ratingOptions: serializeRatingOptionFields(newQuestion.ratingOptions),
+        weight: newQuestion.weight,
+        scoreMin: newQuestion.scoreMin,
+        scoreMax: newQuestion.scoreMax,
       });
       setNewQuestion({
         statement: '',
@@ -1014,6 +1099,8 @@ const AssessmentQuestionsModal: React.FC<{
         weight: 1.0,
         scoreMin: 1,
         scoreMax: 5,
+        proficiencyLevelId: defaultLevelId,
+        ratingOptions: cloneDefaultRatingOptions(),
       });
       setShowAddForm(false);
       await loadQuestions();
@@ -1023,12 +1110,17 @@ const AssessmentQuestionsModal: React.FC<{
   };
 
   const handleEditQuestion = (question: any) => {
-    setEditingQuestion(question);
+    setEditingQuestion({
+      ...question,
+      examples: question.examples?.length ? question.examples : [''],
+      ratingOptions: normalizeRatingOptionFields(question.ratingOptions),
+      proficiencyLevelId: question.proficiencyLevelId || '',
+    });
     setShowAddForm(false);
   };
 
   const handleUpdateQuestion = async () => {
-    if (!editingQuestion.statement.trim()) {
+    if (!editingQuestion || !editingQuestion.statement.trim()) {
       setError('Question statement is required');
       return;
     }
@@ -1038,6 +1130,11 @@ const AssessmentQuestionsModal: React.FC<{
         statement: editingQuestion.statement,
         type: editingQuestion.type,
         examples: editingQuestion.examples.filter((ex: string) => ex.trim()),
+        proficiencyLevelId: editingQuestion.proficiencyLevelId || null,
+        ratingOptions: serializeRatingOptionFields(editingQuestion.ratingOptions || []),
+        weight: editingQuestion.weight,
+        scoreMin: editingQuestion.scoreMin,
+        scoreMax: editingQuestion.scoreMax,
       });
       setEditingQuestion(null);
       await loadQuestions();
@@ -1142,8 +1239,10 @@ const AssessmentQuestionsModal: React.FC<{
                   Existing Questions ({questions.length})
                 </h3>
                 <div className="space-y-3">
-                  {questions.map((q, index) => (
-                    <div key={q.id} className="card">
+                  {questions.map((q, index) => {
+                    const ratingScale = normalizeRatingOptionFields(q.ratingOptions);
+                    return (
+                      <div key={q.id} className="card">
                       {editingQuestion?.id === q.id ? (
                         /* Edit Form */
                         <div className="space-y-4">
@@ -1158,24 +1257,99 @@ const AssessmentQuestionsModal: React.FC<{
                               placeholder="Enter the assessment question..."
                             />
                           </div>
-                          <div>
-                            <label className="label">Question Type</label>
-                            <select
-                              value={editingQuestion.type}
-                              onChange={(e) =>
-                                setEditingQuestion({ ...editingQuestion, type: e.target.value })
-                              }
-                              className="input"
-                            >
-                              <option value="BEHAVIORAL">Behavioral</option>
-                              <option value="SITUATIONAL">Situational</option>
-                              <option value="TECHNICAL">Technical</option>
-                              <option value="KNOWLEDGE">Knowledge</option>
-                            </select>
+                      <div>
+                        <label className="label">Question Type</label>
+                        <select
+                          value={editingQuestion.type}
+                          onChange={(e) =>
+                            setEditingQuestion({ ...editingQuestion, type: e.target.value })
+                          }
+                          className="input"
+                        >
+                          <option value="BEHAVIORAL">Behavioral</option>
+                          <option value="SITUATIONAL">Situational</option>
+                          <option value="TECHNICAL">Technical</option>
+                          <option value="KNOWLEDGE">Knowledge</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label">Proficiency Level</label>
+                        <select
+                          value={editingQuestion.proficiencyLevelId || ''}
+                          onChange={(e) =>
+                            setEditingQuestion({
+                              ...editingQuestion,
+                              proficiencyLevelId: e.target.value,
+                            })
+                          }
+                          className="input"
+                        >
+                          <option value="">Applies to All Levels</option>
+                          {(competency.proficiencyLevels || []).map((level: any) => (
+                            <option key={level.id} value={level.id}>
+                              {level.name}
+                              {level.numericLevel ? ` (Level ${level.numericLevel})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Linking a level helps assessments stay aligned with skill expectations.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="label">Rating Scale Labels</label>
+                        {editingQuestion.ratingOptions?.map((option: RatingOptionField, i: number) => (
+                          <div key={`${option.key}-${i}`} className="flex items-center space-x-2 mb-2">
+                            <span className="text-xs font-semibold text-gray-600 w-6">{i + 1}.</span>
+                            <input
+                              type="text"
+                              value={option.label}
+                              onChange={(e) => {
+                                const updated = [...editingQuestion.ratingOptions];
+                                updated[i] = { ...updated[i], label: e.target.value };
+                                setEditingQuestion({ ...editingQuestion, ratingOptions: updated });
+                              }}
+                              className="input flex-1"
+                              placeholder="Describe what this rating means..."
+                            />
+                            {editingQuestion.ratingOptions.length > MIN_RATING_OPTIONS && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = editingQuestion.ratingOptions.filter(
+                                    (_: RatingOptionField, idx: number) => idx !== i
+                                  );
+                                  setEditingQuestion({ ...editingQuestion, ratingOptions: updated });
+                                }}
+                                className="btn btn-secondary"
+                              >
+                                Remove
+                              </button>
+                            )}
                           </div>
-                          <div>
-                            <label className="label">Examples (Optional)</label>
-                            {editingQuestion.examples.map((ex: string, i: number) => (
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editingQuestion.ratingOptions.length >= MAX_RATING_OPTIONS) return;
+                            setEditingQuestion({
+                              ...editingQuestion,
+                              ratingOptions: [
+                                ...editingQuestion.ratingOptions,
+                                { key: String(editingQuestion.ratingOptions.length + 1), label: '' },
+                              ],
+                            });
+                          }}
+                          className="btn btn-secondary text-sm"
+                          disabled={editingQuestion.ratingOptions.length >= MAX_RATING_OPTIONS}
+                        >
+                          <Plus size={14} className="inline mr-1" />
+                          Add Scale Point
+                        </button>
+                      </div>
+                      <div>
+                        <label className="label">Examples (Optional)</label>
+                        {editingQuestion.examples.map((ex: string, i: number) => (
                               <div key={i} className="flex space-x-2 mb-2">
                                 <input
                                   type="text"
@@ -1247,6 +1421,11 @@ const AssessmentQuestionsModal: React.FC<{
                                     AI
                                   </span>
                                 )}
+                                {q.proficiencyLevel?.name && (
+                                  <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                                    {q.proficiencyLevel.name}
+                                  </span>
+                                )}
                               </div>
                               {q.examples && q.examples.length > 0 && (
                                 <div className="mt-3 pl-3 border-l-2 border-gray-200">
@@ -1258,6 +1437,23 @@ const AssessmentQuestionsModal: React.FC<{
                                       <li key={i}>• {ex}</li>
                                     ))}
                                   </ul>
+                                </div>
+                              )}
+                              {ratingScale.length > 0 && (
+                                <div className="mt-3 pl-3 border-l-2 border-primary-100">
+                                  <p className="text-xs font-semibold text-gray-700 mb-1">
+                                    Rating Scale
+                                  </p>
+                                  <ol className="text-xs text-gray-600 space-y-1 list-decimal ml-4">
+                                    {ratingScale.map((option, idx) => (
+                                      <li key={`${q.id}-rating-${idx}`}>
+                                        <span className="font-semibold text-primary-600 mr-1">
+                                          {idx + 1}.
+                                        </span>
+                                        {option.label}
+                                      </li>
+                                    ))}
+                                  </ol>
                                 </div>
                               )}
                             </div>
@@ -1280,8 +1476,9 @@ const AssessmentQuestionsModal: React.FC<{
                           </div>
                         </div>
                       )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1320,6 +1517,73 @@ const AssessmentQuestionsModal: React.FC<{
                       <option value="TECHNICAL">Technical</option>
                       <option value="KNOWLEDGE">Knowledge</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="label">Proficiency Level</label>
+                    <select
+                      value={newQuestion.proficiencyLevelId || ''}
+                      onChange={(e) =>
+                        setNewQuestion({
+                          ...newQuestion,
+                          proficiencyLevelId: e.target.value,
+                        })
+                      }
+                      className="input"
+                    >
+                      <option value="">Applies to All Levels</option>
+                      {(competency.proficiencyLevels || []).map((level: any) => (
+                        <option key={level.id} value={level.id}>
+                          {level.name}
+                          {level.numericLevel ? ` (Level ${level.numericLevel})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Rating Scale Labels</label>
+                    {newQuestion.ratingOptions.map((option, i) => (
+                      <div key={`${option.key}-${i}`} className="flex items-center space-x-2 mb-2">
+                        <span className="text-xs font-semibold text-gray-600 w-6">{i + 1}.</span>
+                        <input
+                          type="text"
+                          value={option.label}
+                          onChange={(e) => {
+                            const updated = [...newQuestion.ratingOptions];
+                            updated[i] = { ...updated[i], label: e.target.value };
+                            setNewQuestion({ ...newQuestion, ratingOptions: updated });
+                          }}
+                          className="input flex-1"
+                          placeholder="Describe what this rating represents..."
+                        />
+                        {newQuestion.ratingOptions.length > MIN_RATING_OPTIONS && (
+                          <button
+                            onClick={() => {
+                              const updated = newQuestion.ratingOptions.filter((_, idx) => idx !== i);
+                              setNewQuestion({ ...newQuestion, ratingOptions: updated });
+                            }}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        if (newQuestion.ratingOptions.length >= MAX_RATING_OPTIONS) return;
+                        setNewQuestion({
+                          ...newQuestion,
+                          ratingOptions: [
+                            ...newQuestion.ratingOptions,
+                            { key: String(newQuestion.ratingOptions.length + 1), label: '' },
+                          ],
+                        });
+                      }}
+                      className="text-sm text-primary-600 hover:text-primary-800"
+                      disabled={newQuestion.ratingOptions.length >= MAX_RATING_OPTIONS}
+                    >
+                      + Add Scale Point
+                    </button>
                   </div>
                   <div>
                     <label className="label">Examples (Optional)</label>
@@ -1372,6 +1636,8 @@ const AssessmentQuestionsModal: React.FC<{
                           weight: 1.0,
                           scoreMin: 1,
                           scoreMax: 5,
+                          proficiencyLevelId: defaultLevelId,
+                          ratingOptions: cloneDefaultRatingOptions(),
                         });
                       }}
                       className="btn btn-secondary"
@@ -1739,6 +2005,7 @@ const AssessmentTab: React.FC<{ competencies: Competency[] }> = ({ competencies 
   if (assessmentState === 'taking' && currentAssessment) {
     const currentQuestion = currentAssessment.questions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / currentAssessment.questions.length) * 100;
+    const ratingOptions = getNumericRatingOptions(currentQuestion.ratingOptions);
 
     return (
       <div className="space-y-6">
@@ -1767,6 +2034,11 @@ const AssessmentTab: React.FC<{ competencies: Competency[] }> = ({ competencies 
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               {currentQuestion.statement}
             </h2>
+            {currentQuestion.proficiencyLevelName && (
+              <p className="text-sm text-gray-600 mb-2">
+                Target Level: {currentQuestion.proficiencyLevelName}
+              </p>
+            )}
             {currentQuestion.examples && currentQuestion.examples.length > 0 && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm font-semibold text-gray-700 mb-2">Examples:</p>
@@ -1788,27 +2060,21 @@ const AssessmentTab: React.FC<{ competencies: Competency[] }> = ({ competencies 
           {/* Rating Scale */}
           <div className="space-y-4 mb-6">
             <label className="block text-sm font-medium text-gray-700">
-              Rate your proficiency (1 = Lowest, 5 = Highest)
+              Rate your proficiency ({ratingOptions.length}-point scale)
             </label>
             <div className="flex space-x-4">
-              {[1, 2, 3, 4, 5].map((rating) => (
+              {ratingOptions.map((option) => (
                 <button
-                  key={rating}
-                  onClick={() => setCurrentRating(rating)}
+                  key={`${currentQuestion.id}-${option.value}`}
+                  onClick={() => setCurrentRating(option.value)}
                   className={`flex-1 py-4 rounded-lg border-2 transition-colors ${
-                    currentRating === rating
+                    currentRating === option.value
                       ? 'border-primary-600 bg-primary-50 text-primary-900'
                       : 'border-gray-300 hover:border-gray-400 text-gray-700'
                   }`}
                 >
-                  <div className="text-2xl font-bold">{rating}</div>
-                  <div className="text-xs mt-1">
-                    {rating === 1 && 'Beginner'}
-                    {rating === 2 && 'Basic'}
-                    {rating === 3 && 'Intermediate'}
-                    {rating === 4 && 'Advanced'}
-                    {rating === 5 && 'Expert'}
-                  </div>
+                  <div className="text-2xl font-bold">{option.value}</div>
+                  <div className="text-xs mt-1 text-left">{option.label}</div>
                 </button>
               ))}
             </div>

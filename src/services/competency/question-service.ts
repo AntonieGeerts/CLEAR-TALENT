@@ -2,6 +2,37 @@ import { PrismaClient, QuestionType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const DEFAULT_RATING_OPTIONS: Record<string, string> = {
+  '1': 'Never Demonstrated',
+  '2': 'Sometimes Demonstrated',
+  '3': 'Consistently Demonstrated',
+  '4': 'Consistently Demonstrated + shows evidence of higher-level application',
+};
+
+const sanitizeRatingOptions = (options?: Record<string, string> | null): Record<string, string> => {
+  if (!options || typeof options !== 'object') {
+    return { ...DEFAULT_RATING_OPTIONS };
+  }
+
+  const normalized = Object.entries(options)
+    .filter(([key, value]) => key && typeof value === 'string' && value.trim().length > 0)
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .reduce<Record<string, string>>((acc, [key, value], index) => {
+      const parsedKey = Number.isNaN(Number(key)) ? index + 1 : Number(key);
+      acc[String(parsedKey)] = value.trim();
+      return acc;
+    }, {});
+
+  return Object.keys(normalized).length > 0 ? normalized : { ...DEFAULT_RATING_OPTIONS };
+};
+
+const sanitizeExamples = (examples?: string[] | null): string[] => {
+  if (!Array.isArray(examples)) return [];
+  return examples
+    .map((example) => example?.trim())
+    .filter((example): example is string => Boolean(example?.length));
+};
+
 export class CompetencyQuestionService {
   /**
    * Get all questions for a competency
@@ -9,7 +40,31 @@ export class CompetencyQuestionService {
   static async getQuestionsByCompetency(competencyId: string): Promise<any[]> {
     const questions = await prisma.competencyQuestion.findMany({
       where: { competencyId },
-      orderBy: { createdAt: 'asc' },
+      include: {
+        proficiencyLevel: {
+          select: {
+            id: true,
+            name: true,
+            numericLevel: true,
+            sortOrder: true,
+          },
+        },
+        scoringSystem: {
+          select: {
+            id: true,
+            name: true,
+            systemId: true,
+          },
+        },
+      },
+      orderBy: [
+        {
+          proficiencyLevel: {
+            sortOrder: 'asc',
+          },
+        },
+        { createdAt: 'asc' },
+      ],
     });
 
     return questions;
@@ -25,6 +80,12 @@ export class CompetencyQuestionService {
       type: QuestionType;
       examples?: string[];
       aiGenerated?: boolean;
+      proficiencyLevelId?: string | null;
+      ratingOptions?: Record<string, string> | null;
+      weight?: number | null;
+      scoreMin?: number | null;
+      scoreMax?: number | null;
+      scoringSystemId?: string | null;
     }
   ): Promise<any> {
     // Verify competency exists
@@ -41,8 +102,14 @@ export class CompetencyQuestionService {
         competencyId,
         statement: data.statement,
         type: data.type,
-        examples: data.examples || [],
+        examples: sanitizeExamples(data.examples),
         aiGenerated: data.aiGenerated || false,
+        proficiencyLevelId: data.proficiencyLevelId || null,
+        ratingOptions: sanitizeRatingOptions(data.ratingOptions),
+        weight: data.weight ?? 1.0,
+        scoreMin: data.scoreMin ?? 1,
+        scoreMax: data.scoreMax ?? 5,
+        scoringSystemId: data.scoringSystemId || null,
       },
     });
 
@@ -58,6 +125,12 @@ export class CompetencyQuestionService {
       statement?: string;
       type?: QuestionType;
       examples?: string[];
+      proficiencyLevelId?: string | null;
+      ratingOptions?: Record<string, string> | null;
+      weight?: number | null;
+      scoreMin?: number | null;
+      scoreMax?: number | null;
+      scoringSystemId?: string | null;
     }
   ): Promise<any> {
     const question = await prisma.competencyQuestion.update({
@@ -65,7 +138,13 @@ export class CompetencyQuestionService {
       data: {
         statement: data.statement,
         type: data.type,
-        examples: data.examples,
+        examples: data.examples ? sanitizeExamples(data.examples) : undefined,
+        proficiencyLevelId: data.proficiencyLevelId,
+        ratingOptions: data.ratingOptions ? sanitizeRatingOptions(data.ratingOptions) : undefined,
+        weight: data.weight ?? undefined,
+        scoreMin: data.scoreMin ?? undefined,
+        scoreMax: data.scoreMax ?? undefined,
+        scoringSystemId: data.scoringSystemId,
       },
     });
 
@@ -92,6 +171,9 @@ export class CompetencyQuestionService {
       examples?: string[];
       proficiencyLevelId?: string;
       ratingOptions?: any;
+      weight?: number;
+      scoreMin?: number;
+      scoreMax?: number;
     }>
   ): Promise<any[]> {
     // Verify competency exists
@@ -110,9 +192,12 @@ export class CompetencyQuestionService {
             competencyId,
             statement: q.statement,
             type: q.type,
-            examples: q.examples || [],
+            examples: sanitizeExamples(q.examples),
             proficiencyLevelId: q.proficiencyLevelId || null,
-            ratingOptions: q.ratingOptions || null,
+            ratingOptions: sanitizeRatingOptions(q.ratingOptions),
+            weight: q.weight ?? 1.0,
+            scoreMin: q.scoreMin ?? 1,
+            scoreMax: q.scoreMax ?? 5,
             aiGenerated: true,
           },
         })

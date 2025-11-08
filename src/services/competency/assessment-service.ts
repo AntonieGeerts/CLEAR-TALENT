@@ -2,6 +2,34 @@ import { PrismaClient, AssessmentStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const DEFAULT_RATING_OPTIONS: Record<string, string> = {
+  '1': 'Never Demonstrated',
+  '2': 'Sometimes Demonstrated',
+  '3': 'Consistently Demonstrated',
+  '4': 'Consistently Demonstrated + shows evidence of higher-level application',
+};
+
+const normalizeRatingOptions = (options: any): Record<string, string> => {
+  if (
+    options &&
+    typeof options === 'object' &&
+    !Array.isArray(options)
+  ) {
+    const entries = Object.entries(options as Record<string, string>)
+      .filter(([key, value]) => !!key && typeof value === 'string' && value.trim().length > 0)
+      .sort((a, b) => Number(a[0]) - Number(b[0]));
+    if (entries.length > 0) {
+      return Object.fromEntries(entries);
+    }
+  }
+  return { ...DEFAULT_RATING_OPTIONS };
+};
+
+const getRatingScale = (options: Record<string, string>): number => {
+  const keys = Object.keys(options);
+  return keys.length > 0 ? keys.length : 4;
+};
+
 export interface CreateAssessmentInput {
   tenantId: string;
   userId: string;
@@ -62,6 +90,18 @@ export class AssessmentService {
       where: {
         competencyId: { in: competencyIds },
       },
+      include: {
+        competency: true,
+        proficiencyLevel: true,
+      },
+      orderBy: [
+        {
+          proficiencyLevel: {
+            sortOrder: 'asc',
+          },
+        },
+        { createdAt: 'asc' },
+      ],
     });
 
     if (questions.length === 0) {
@@ -82,13 +122,21 @@ export class AssessmentService {
 
     return {
       ...assessment,
-      questions: questions.map((q) => ({
-        id: q.id,
-        competencyId: q.competencyId,
-        statement: q.statement,
-        type: q.type,
-        examples: q.examples,
-      })),
+      questions: questions.map((q) => {
+        const ratingOptions = normalizeRatingOptions(q.ratingOptions);
+        return {
+          id: q.id,
+          competencyId: q.competencyId,
+          competencyName: q.competency?.name,
+          statement: q.statement,
+          type: q.type,
+          examples: q.examples,
+          ratingOptions,
+          ratingScale: getRatingScale(ratingOptions),
+          proficiencyLevelId: q.proficiencyLevelId,
+          proficiencyLevelName: q.proficiencyLevel?.name,
+        };
+      }),
     };
   }
 
@@ -125,15 +173,22 @@ export class AssessmentService {
       },
       include: {
         competency: true,
+        proficiencyLevel: true,
       },
-      orderBy: {
-        createdAt: 'asc',
-      },
+      orderBy: [
+        {
+          proficiencyLevel: {
+            sortOrder: 'asc',
+          },
+        },
+        { createdAt: 'asc' },
+      ],
     });
 
     // Map responses to questions
     const questionsWithResponses = questions.map((q) => {
       const response = assessment.responses.find((r) => r.questionId === q.id);
+      const ratingOptions = normalizeRatingOptions(q.ratingOptions);
       return {
         id: q.id,
         competencyId: q.competencyId,
@@ -141,6 +196,10 @@ export class AssessmentService {
         statement: q.statement,
         type: q.type,
         examples: q.examples,
+        ratingOptions,
+        ratingScale: getRatingScale(ratingOptions),
+        proficiencyLevelId: q.proficiencyLevelId,
+        proficiencyLevelName: q.proficiencyLevel?.name,
         response: response
           ? {
               rating: response.rating,

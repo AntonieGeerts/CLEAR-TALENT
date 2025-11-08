@@ -417,25 +417,12 @@ Return the response as a JSON array with this structure:
         proficiencyLevels = refreshed.proficiencyLevels;
       }
 
-      // Normalize questionsPerLevel to an object format
-      const questionCounts = typeof questionsPerLevel === 'number'
-        ? {} // Will use default for all levels
-        : questionsPerLevel;
-
       aiLogger.info('Generating assessment questions', {
         competencyId,
         competencyName: competency.name,
         questionsPerLevel,
         proficiencyLevels: competency.proficiencyLevels.length,
       });
-
-      // Define the standard rating options
-      const ratingOptions = {
-        "1": "Never Demonstrated",
-        "2": "Sometimes Demonstrated",
-        "3": "Consistently Demonstrated",
-        "4": "Consistently demonstrated + shows evidence of higher level application"
-      };
 
       // Target the 4 main proficiency levels
       const preferredLevelNames = ['basic', 'intermediate', 'advanced', 'expert'];
