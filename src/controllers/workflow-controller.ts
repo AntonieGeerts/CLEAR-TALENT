@@ -137,7 +137,7 @@ export class WorkflowController {
   static async analyzeFeedback(req: AuthRequest, res: Response) {
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
-    const { feedbackTexts, employeeId } = req.body;
+    const { feedbackTexts } = req.body;
 
     if (!feedbackTexts || !Array.isArray(feedbackTexts) || feedbackTexts.length === 0) {
       return res.status(400).json({

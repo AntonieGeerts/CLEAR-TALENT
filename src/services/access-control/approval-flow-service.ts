@@ -26,11 +26,7 @@
  *   });
  */
 
-import {
-  PrismaClient,
-  ApproverType,
-  ApprovalFlowDefinition,
-} from '@prisma/client';
+import { PrismaClient, ApproverType } from '@prisma/client';
 import { logger } from '../../utils/logger';
 import { AuditService, AuditEventTypes } from './audit-service';
 

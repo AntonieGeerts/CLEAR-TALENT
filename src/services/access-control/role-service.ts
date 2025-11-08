@@ -237,7 +237,7 @@ export class RoleService {
       }
 
       // Update role
-      const updated = await prisma.role.update({
+      await prisma.role.update({
         where: { id: roleId },
         data: {
           ...(name && { name }),
