@@ -16,6 +16,7 @@ import rbacRoutes from './rbac-routes';
 import staffRoutes from './staff-routes';
 import auditRoutes from './audit-routes';
 import assessmentRoutes from './assessment-routes';
+import idpRoutes from './idp-routes';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -46,6 +47,7 @@ router.use('/organizational-goals', authenticate, organizationalGoalsRoutes);
 router.use('/goals', authenticate, goalsRoutes);
 router.use('/pips', authenticate, pipRoutes);
 router.use('/assessments', authenticate, assessmentRoutes);
+router.use('/idps', authenticate, idpRoutes);
 
 // System Admin routes
 router.use('/tenants', authenticate, tenantRoutes);
