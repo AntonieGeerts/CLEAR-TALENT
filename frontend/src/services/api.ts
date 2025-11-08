@@ -99,6 +99,8 @@ class ApiService {
 
   async generateCompetenciesByCategory(data: {
     category: 'CORE' | 'LEADERSHIP' | 'FUNCTIONAL';
+    categoryName?: string;
+    categoryDescription?: string;
     count?: number;
     companyContext?: {
       companyName: string;
