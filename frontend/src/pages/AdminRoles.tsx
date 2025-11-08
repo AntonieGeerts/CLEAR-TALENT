@@ -64,10 +64,19 @@ export const AdminRoles: React.FC = () => {
         apiService.getRoles(),
         apiService.getPermissions(),
       ]);
-      setRoles(rolesRes.data || []);
-      setPermissions(permissionsRes.data || []);
+      // Ensure we always have arrays, even if data is undefined/null
+      setRoles(Array.isArray(rolesRes.data) ? rolesRes.data : []);
+      setPermissions(Array.isArray(permissionsRes.data) ? permissionsRes.data : []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load roles');
+      console.error('Error loading roles:', err);
+      // Handle 404 (not found) as empty data, not an error
+      if (err.response?.status === 404 || err.message?.toLowerCase().includes('not found')) {
+        setRoles([]);
+        setPermissions([]);
+      } else {
+        // Only show error for actual failures (network errors, server errors, etc.)
+        setError(err.response?.data?.message || 'Unable to connect to server. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -232,9 +241,18 @@ export const AdminRoles: React.FC = () => {
       )}
 
       {/* Roles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {roles.map((role) => (
-          <div key={role.id} className="card hover:shadow-lg transition-shadow">
+      {roles.length === 0 ? (
+        <div className="card text-center py-12">
+          <Shield className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No roles found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Get started by creating your first custom role
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {roles.map((role) => (
+            <div key={role.id} className="card hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div
@@ -303,7 +321,8 @@ export const AdminRoles: React.FC = () => {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Create Role Modal */}
       {showCreateModal && (
