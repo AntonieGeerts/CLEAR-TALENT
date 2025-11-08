@@ -84,6 +84,64 @@ async function main() {
 
   console.log('✓ Created HR manager:', hrUser.email);
 
+  // Create TenantUserMembership records for admin and HR users
+  // First, find the system roles (created by seed-access-control script)
+  const hrAdminRole = await prisma.role.findFirst({
+    where: {
+      key: 'HR_ADMIN',
+      tenantId: null, // System roles have no tenant
+    },
+  });
+
+  const tenantOwnerRole = await prisma.role.findFirst({
+    where: {
+      key: 'TENANT_OWNER',
+      tenantId: null,
+    },
+  });
+
+  // Create membership for admin user (as TENANT_OWNER)
+  if (tenantOwnerRole) {
+    await prisma.tenantUserMembership.upsert({
+      where: {
+        tenantId_userId: {
+          tenantId: demoTenant.id,
+          userId: adminUser.id,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: demoTenant.id,
+        userId: adminUser.id,
+        primaryRoleId: tenantOwnerRole.id,
+        status: 'ACTIVE',
+        joinedAt: new Date(),
+      },
+    });
+    console.log('✓ Created membership for admin user');
+  }
+
+  // Create membership for HR user (as HR_ADMIN)
+  if (hrAdminRole) {
+    await prisma.tenantUserMembership.upsert({
+      where: {
+        tenantId_userId: {
+          tenantId: demoTenant.id,
+          userId: hrUser.id,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: demoTenant.id,
+        userId: hrUser.id,
+        primaryRoleId: hrAdminRole.id,
+        status: 'ACTIVE',
+        joinedAt: new Date(),
+      },
+    });
+    console.log('✓ Created membership for HR user');
+  }
+
   // Create sample competencies (prevent duplicates)
   const competencies = [
     {

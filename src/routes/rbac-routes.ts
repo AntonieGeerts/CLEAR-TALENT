@@ -18,8 +18,9 @@ const router = Router();
 const roleService = new RoleService();
 
 // All routes require authentication and tenant context
+// Allow system admins to access roles and permissions across all tenants
 router.use(authenticate);
-router.use(tenantContext());
+router.use(tenantContext({ allowSystemAdmin: true }));
 
 /**
  * GET /api/v1/rbac/roles
