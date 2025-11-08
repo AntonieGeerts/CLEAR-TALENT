@@ -6,6 +6,14 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+export interface KPI {
+  name: string;
+  description?: string;
+  target?: string;
+  unit?: string;
+  frequency?: string;
+}
+
 // Auth Types
 export interface User {
   id: string;
@@ -105,6 +113,12 @@ export interface Goal {
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+  metadata?: GoalMetadata;
+}
+
+export interface GoalMetadata {
+  kpis?: KPI[];
+  [key: string]: any;
 }
 
 // Skill Gap Types
