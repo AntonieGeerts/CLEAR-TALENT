@@ -82,24 +82,55 @@ export class AIController {
   }
 
   /**
-   * Generate competencies by category
+   * Generate custom competency category names based on company context
    */
-  static async generateByCategory(req: AuthRequest, res: Response) {
-    const { category, count = 5, companyContext } = req.body;
+  static async generateCategories(req: AuthRequest, res: Response) {
+    const { companyContext, count = 6 } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
 
-    if (!['CORE', 'LEADERSHIP', 'FUNCTIONAL'].includes(category)) {
+    if (!companyContext?.companyName || !companyContext?.industry) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid category. Must be CORE, LEADERSHIP, or FUNCTIONAL',
+        error: 'companyContext with companyName and industry is required',
+      });
+    }
+
+    const categories = await AICompetencyService.generateCompetencyCategories(
+      tenantId,
+      userId,
+      companyContext,
+      count
+    );
+
+    res.json({
+      success: true,
+      data: categories,
+      message: `${categories.length} custom competency categories generated for ${companyContext.companyName}`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Generate competencies by category (supports custom category names)
+   */
+  static async generateByCategory(req: AuthRequest, res: Response) {
+    const { categoryName, categoryDescription, count = 5, companyContext } = req.body;
+    const tenantId = req.tenant!.id;
+    const userId = req.user!.id;
+
+    if (!categoryName) {
+      return res.status(400).json({
+        success: false,
+        error: 'categoryName is required',
       });
     }
 
     const competencies = await AICompetencyService.generateCompetenciesByCategory(
       tenantId,
       userId,
-      category,
+      categoryName,
+      categoryDescription,
       count,
       companyContext
     );
@@ -107,25 +138,48 @@ export class AIController {
     res.json({
       success: true,
       data: competencies,
-      message: `${competencies.length} ${category} competencies generated`,
+      message: `${competencies.length} competencies generated for "${categoryName}" category`,
       timestamp: new Date().toISOString(),
     });
   }
 
   /**
    * Generate assessment questions for a competency
+   * Generates questions for each proficiency level (Basic, Proficient, Advanced, Expert)
+   *
+   * Request body can be:
+   * 1. { "questionsPerLevel": 3 } - Generate 3 questions for each level
+   * 2. { "questionsPerLevel": { "Basic": 2, "Proficient": 3, "Advanced": 4, "Expert": 5 } } - Specify per level
    */
   static async generateAssessmentQuestions(req: AuthRequest, res: Response) {
     const { id } = req.params;
-    const { count = 5, autoSave = true } = req.body;
+    const { questionsPerLevel = 3, autoSave = true } = req.body;
     const tenantId = req.tenant!.id;
     const userId = req.user!.id;
+
+    // Validate input
+    if (typeof questionsPerLevel === 'object' && questionsPerLevel !== null) {
+      // Validate that all values are positive numbers
+      for (const [level, count] of Object.entries(questionsPerLevel)) {
+        if (typeof count !== 'number' || count < 0) {
+          return res.status(400).json({
+            success: false,
+            error: `Invalid count for level "${level}": must be a non-negative number`,
+          });
+        }
+      }
+    } else if (typeof questionsPerLevel !== 'number' || questionsPerLevel < 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'questionsPerLevel must be a positive number or an object mapping level names to counts',
+      });
+    }
 
     const questions = await AICompetencyService.generateAssessmentQuestions(
       id,
       tenantId,
       userId,
-      count
+      questionsPerLevel
     );
 
     // Auto-save questions to database if requested
@@ -135,20 +189,33 @@ export class AIController {
         '../services/competency/question-service'
       );
 
-      // Map AI-generated types to QuestionType enum
+      // Map AI-generated questions with proficiency level and rating options
       const mappedQuestions = questions.map((q: any) => ({
         statement: q.statement,
         type: AIController.mapQuestionType(q.type),
         examples: q.examples || [],
+        proficiencyLevelId: q.proficiencyLevelId,
+        ratingOptions: q.ratingOptions,
       }));
 
       savedQuestions = await CompetencyQuestionService.bulkCreateQuestions(id, mappedQuestions);
     }
 
+    // Build summary message
+    const levelCounts = savedQuestions.reduce((acc: Record<string, number>, q: any) => {
+      const levelName = q.proficiencyLevel?.name || 'Unknown';
+      acc[levelName] = (acc[levelName] || 0) + 1;
+      return acc;
+    }, {});
+
     res.json({
       success: true,
       data: savedQuestions,
-      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved' : 'generated'}`,
+      summary: {
+        total: questions.length,
+        byLevel: levelCounts,
+      },
+      message: `${questions.length} assessment questions ${autoSave ? 'generated and saved for proficiency levels' : 'generated'}`,
       timestamp: new Date().toISOString(),
     });
   }

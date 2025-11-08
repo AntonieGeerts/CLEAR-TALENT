@@ -90,6 +90,8 @@ export class CompetencyQuestionService {
       statement: string;
       type: QuestionType;
       examples?: string[];
+      proficiencyLevelId?: string;
+      ratingOptions?: any;
     }>
   ): Promise<any[]> {
     // Verify competency exists
@@ -109,6 +111,8 @@ export class CompetencyQuestionService {
             statement: q.statement,
             type: q.type,
             examples: q.examples || [],
+            proficiencyLevelId: q.proficiencyLevelId || null,
+            ratingOptions: q.ratingOptions || null,
             aiGenerated: true,
           },
         })

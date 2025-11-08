@@ -59,7 +59,8 @@ export const AdminAuditLogs: React.FC = () => {
         endDate: endDate || undefined,
         limit: 100,
       });
-      const logsData = response.data || [];
+      // Ensure we always have an array, even if data is undefined/null
+      const logsData = Array.isArray(response.data) ? response.data : [];
       setLogs(logsData);
 
       // Extract unique event types and resource types
@@ -68,7 +69,16 @@ export const AdminAuditLogs: React.FC = () => {
       setEventTypes(uniqueEventTypes as string[]);
       setResourceTypes(uniqueResourceTypes as string[]);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load audit logs');
+      console.error('Error loading audit logs:', err);
+      // Handle 404 (not found) as empty data, not an error
+      if (err.response?.status === 404 || err.message?.toLowerCase().includes('not found')) {
+        setLogs([]);
+        setEventTypes([]);
+        setResourceTypes([]);
+      } else {
+        // Only show error for actual failures (network errors, server errors, etc.)
+        setError(err.response?.data?.message || 'Unable to connect to server. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -89,10 +89,19 @@ export const AdminStaff: React.FC = () => {
         }),
         apiService.getRoles(),
       ]);
-      setStaff(staffRes.data || []);
-      setRoles(rolesRes.data || []);
+      // Ensure we always have arrays, even if data is undefined/null
+      setStaff(Array.isArray(staffRes.data) ? staffRes.data : []);
+      setRoles(Array.isArray(rolesRes.data) ? rolesRes.data : []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load staff');
+      console.error('Error loading staff:', err);
+      // Handle 404 (not found) as empty data, not an error
+      if (err.response?.status === 404 || err.message?.toLowerCase().includes('not found')) {
+        setStaff([]);
+        setRoles([]);
+      } else {
+        // Only show error for actual failures (network errors, server errors, etc.)
+        setError(err.response?.data?.message || 'Unable to connect to server. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
