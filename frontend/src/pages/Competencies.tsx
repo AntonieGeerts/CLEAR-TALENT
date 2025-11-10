@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { Competency } from '../types';
-import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCircle, Info } from 'lucide-react';
+import { BookOpen, Plus, Sparkles, Loader, Trash2, Edit, ClipboardList, CheckCircle } from 'lucide-react';
 import {
   cloneDefaultRatingOptions,
   MAX_RATING_OPTIONS,

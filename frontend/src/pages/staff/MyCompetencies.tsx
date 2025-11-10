@@ -52,7 +52,7 @@ export const MyCompetencies: React.FC = () => {
       if (roleList.length) {
         const normalizedPosition = user?.position?.toLowerCase();
         const preferred = normalizedPosition
-          ? roleList.find((role) => role.title?.toLowerCase() === normalizedPosition)
+          ? roleList.find((role: RoleProfileAssignment) => role.title?.toLowerCase() === normalizedPosition)
           : null;
         const fallback = preferred || roleList[0];
         setSelectedRoleId(fallback.id);
@@ -70,7 +70,10 @@ export const MyCompetencies: React.FC = () => {
     loadAssignments();
   }, [user?.department, user?.position]);
 
-  const selectedRole = useMemo(() => roles.find((role) => role.id === selectedRoleId) || null, [roles, selectedRoleId]);
+  const selectedRole = useMemo(
+    () => roles.find((role: RoleProfileAssignment) => role.id === selectedRoleId) || null,
+    [roles, selectedRoleId]
+  );
 
   const assignedCompetencies = useMemo(() => {
     if (!selectedRole?.roleCompetencies) return [];
@@ -127,7 +130,7 @@ export const MyCompetencies: React.FC = () => {
                 onChange={(e) => setSelectedRoleId(e.target.value)}
                 className="input"
               >
-                {roles.map((role) => (
+                {roles.map((role: RoleProfileAssignment) => (
                   <option key={role.id} value={role.id}>
                     {role.title} · {role.department}
                   </option>

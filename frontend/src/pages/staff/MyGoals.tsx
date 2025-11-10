@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Target, CheckCircle2, Calendar, Loader2, AlertCircle, TrendingUp, ChevronRight } from 'lucide-react';
+import { Target, CheckCircle2, Loader2, AlertCircle, TrendingUp, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
-import { GoalStats, GoalSummary } from '../../types/staff';
+import { GoalStats, GoalSummary, GoalStatus } from '../../types/staff';
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -36,6 +36,14 @@ const statusStyles: Record<string, string> = {
   ARCHIVED: 'bg-gray-100 text-gray-600',
 };
 
+type GoalUpdatePayload = {
+  title?: string;
+  description?: string;
+  status?: GoalStatus;
+  progress?: number;
+  targetDate?: string;
+};
+
 export const MyGoals: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
@@ -66,7 +74,7 @@ export const MyGoals: React.FC = () => {
     loadGoals();
   }, []);
 
-  const updateGoal = async (goalId: string, payload: Partial<GoalSummary>) => {
+  const updateGoal = async (goalId: string, payload: GoalUpdatePayload) => {
     try {
       setUpdatingGoalId(goalId);
       await apiService.updateGoal(goalId, payload);
@@ -79,8 +87,9 @@ export const MyGoals: React.FC = () => {
   };
 
   const incrementProgress = (goal: GoalSummary, delta: number) => {
-    const nextProgress = Math.max(0, Math.min(100, (goal.progress ?? 0) + delta));
-    const nextStatus = nextProgress === 100 ? 'COMPLETED' : goal.status;
+    const baseProgress = goal.progress ?? 0;
+    const nextProgress = Math.max(0, Math.min(100, baseProgress + delta));
+    const nextStatus: GoalStatus = nextProgress === 100 ? 'COMPLETED' : goal.status;
     updateGoal(goal.id, { progress: nextProgress, status: nextStatus });
   };
 

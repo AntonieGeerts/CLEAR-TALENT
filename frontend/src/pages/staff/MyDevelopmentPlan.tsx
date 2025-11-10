@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GraduationCap, CheckCircle2, Loader2, AlertCircle, Target, Sparkles, Calendar } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { GraduationCap, Loader2, AlertCircle, Target, Sparkles, Calendar } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { DevelopmentPlan, PlanAction } from '../../types/staff';
 
@@ -26,12 +25,10 @@ const deriveProgress = (plan: DevelopmentPlan | null, actions: PlanAction[]) => 
 };
 
 export const MyDevelopmentPlan: React.FC = () => {
-  const { user } = useAuth();
   const location = useLocation();
   const staffQuery = new URLSearchParams(location.search).get('view') === 'staff' ? '?view=staff' : '';
   const staffPath = (path: string) => `${path}${staffQuery}`;
 
-  const [plans, setPlans] = useState<DevelopmentPlan[]>([]);
   const [activePlan, setActivePlan] = useState<DevelopmentPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -42,8 +39,7 @@ export const MyDevelopmentPlan: React.FC = () => {
     setError(null);
     try {
       const response = await apiService.getIDPs();
-      const planList = Array.isArray(response.data) ? response.data : [];
-      setPlans(planList);
+      const planList: DevelopmentPlan[] = Array.isArray(response.data) ? response.data : [];
       const current = planList.find((plan) => plan.status === 'ACTIVE') || planList[0] || null;
       setActivePlan(current);
     } catch (err: any) {

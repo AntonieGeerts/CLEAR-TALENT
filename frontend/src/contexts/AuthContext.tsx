@@ -31,6 +31,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const buildTenant = useCallback((tenantData: Tenant | undefined, userTenantId: string | null): Tenant => {
+    if (tenantData) {
+      return tenantData;
+    }
+    const now = new Date().toISOString();
+    return {
+      id: userTenantId ?? 'tenant-fallback',
+      name: 'Organization',
+      slug: 'org',
+      settings: {},
+      createdAt: now,
+      updatedAt: now,
+    };
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
@@ -52,9 +67,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const storedUser = localStorage.getItem('user');
     const storedTenant = localStorage.getItem('tenant');
 
+    let parsedUser: User | null = null;
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
       } catch (error) {
         console.error('Failed to parse stored user', error);
       }
@@ -62,7 +79,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (storedTenant) {
       try {
-        setTenant(JSON.parse(storedTenant));
+        const parsedTenant: Tenant = buildTenant(JSON.parse(storedTenant), parsedUser?.tenantId ?? null);
+        setTenant(parsedTenant);
       } catch (error) {
         console.error('Failed to parse stored tenant', error);
       }
@@ -95,11 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.refreshToken) {
         localStorage.setItem('refresh_token', response.refreshToken);
       }
-      const tenantData = response.tenant || {
-        id: response.user.tenantId,
-        name: 'Organization',
-        slug: 'org',
-      };
+      const tenantData = buildTenant(response.tenant, response.user.tenantId);
       localStorage.setItem('tenant', JSON.stringify(tenantData));
 
       const profile = await refreshCurrentUser();
@@ -123,11 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('refresh_token', response.refreshToken);
       }
 
-      const tenantData = response.tenant || {
-        id: response.user.tenantId,
-        name: 'Organization',
-        slug: 'org',
-      };
+      const tenantData = buildTenant(response.tenant, response.user.tenantId);
       localStorage.setItem('tenant', JSON.stringify(tenantData));
 
       const profile = await refreshCurrentUser();
