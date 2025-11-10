@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Tenant, AuthResponse } from '../types';
 import { apiService } from '../services/api';
 
@@ -31,43 +31,80 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('tenant');
+    setUser(null);
+    setTenant(null);
+  }, []);
+
+  const refreshCurrentUser = useCallback(async () => {
+    const profile = await apiService.getCurrentUser();
+    localStorage.setItem('user', JSON.stringify(profile));
+    setUser(profile);
+    return profile;
+  }, []);
+
   useEffect(() => {
-    // Check if user is already logged in
     const token = localStorage.getItem('auth_token');
     const storedUser = localStorage.getItem('user');
     const storedTenant = localStorage.getItem('tenant');
 
-    if (token && storedUser) {
+    if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
-        if (storedTenant) {
-          setTenant(JSON.parse(storedTenant));
-        }
       } catch (error) {
-        console.error('Failed to parse stored auth data', error);
-        logout();
+        console.error('Failed to parse stored user', error);
       }
     }
-    setIsLoading(false);
-  }, []);
+
+    if (storedTenant) {
+      try {
+        setTenant(JSON.parse(storedTenant));
+      } catch (error) {
+        console.error('Failed to parse stored tenant', error);
+      }
+    }
+
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    const hydrateProfile = async () => {
+      try {
+        await refreshCurrentUser();
+      } catch (error) {
+        console.error('Failed to refresh user profile', error);
+        logout();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    hydrateProfile();
+  }, [logout, refreshCurrentUser]);
 
   const login = async (email: string, password: string) => {
     try {
       const response: AuthResponse = await apiService.login(email, password);
 
       localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-
-      // Tenant might not be in response, create a minimal one from user data
-      const tenant = response.tenant || {
+      if (response.refreshToken) {
+        localStorage.setItem('refresh_token', response.refreshToken);
+      }
+      const tenantData = response.tenant || {
         id: response.user.tenantId,
         name: 'Organization',
-        slug: 'org'
+        slug: 'org',
       };
-      localStorage.setItem('tenant', JSON.stringify(tenant));
+      localStorage.setItem('tenant', JSON.stringify(tenantData));
 
-      setUser(response.user);
-      setTenant(tenant);
+      const profile = await refreshCurrentUser();
+      setUser(profile);
+      setTenant(tenantData);
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
     }
@@ -77,30 +114,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response: AuthResponse = await apiService.register({ email, password, name, role: 'user' });
 
-      localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      if (!response.token) {
+        throw new Error('Registration failed. Please contact an administrator.');
+      }
 
-      // Tenant might not be in response, create a minimal one from user data
-      const tenant = response.tenant || {
+      localStorage.setItem('auth_token', response.token);
+      if (response.refreshToken) {
+        localStorage.setItem('refresh_token', response.refreshToken);
+      }
+
+      const tenantData = response.tenant || {
         id: response.user.tenantId,
         name: 'Organization',
-        slug: 'org'
+        slug: 'org',
       };
-      localStorage.setItem('tenant', JSON.stringify(tenant));
+      localStorage.setItem('tenant', JSON.stringify(tenantData));
 
-      setUser(response.user);
-      setTenant(tenant);
+      const profile = await refreshCurrentUser();
+      setUser(profile);
+      setTenant(tenantData);
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Registration failed');
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tenant');
-    setUser(null);
-    setTenant(null);
   };
 
   return (

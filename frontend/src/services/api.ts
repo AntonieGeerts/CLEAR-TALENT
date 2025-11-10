@@ -221,8 +221,22 @@ class ApiService {
   }
 
   // Role Profiles
-  async getRoleProfiles() {
-    const response = await this.api.get('/role-profiles');
+  async getRoleProfiles(params?: {
+    department?: string;
+    seniority?: string;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.department) queryParams.append('department', params.department);
+    if (params?.seniority) queryParams.append('seniority', params.seniority);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+
+    const queryString = queryParams.toString();
+    const response = await this.api.get(`/role-profiles${queryString ? `?${queryString}` : ''}`);
     return response.data;
   }
 
@@ -338,6 +352,22 @@ class ApiService {
     targetDate?: string;
   }) {
     const response = await this.api.post('/idps', data);
+    return response.data;
+  }
+
+  async updateIDP(
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      status?: string;
+      startDate?: string;
+      targetDate?: string;
+      actions?: any;
+      progress?: number;
+    }
+  ) {
+    const response = await this.api.put(`/idps/${id}`, data);
     return response.data;
   }
 

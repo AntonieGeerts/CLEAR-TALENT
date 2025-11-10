@@ -23,6 +23,8 @@ export interface User {
   lastName?: string | null;
   role: string;
   tenantId: string | null;
+  department?: string | null;
+  position?: string | null;
   aiOptOut?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -39,8 +41,9 @@ export interface Tenant {
 
 export interface AuthResponse {
   token: string;
+  refreshToken?: string;
   user: User;
-  tenant: Tenant;
+  tenant?: Tenant;
 }
 
 export interface LoginCredentials {
