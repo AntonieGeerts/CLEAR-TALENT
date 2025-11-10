@@ -17,6 +17,9 @@ import { PIPs } from './pages/PIPs';
 import { AdminRoles } from './pages/AdminRoles';
 import { AdminStaff } from './pages/AdminStaff';
 import { AdminAuditLogs } from './pages/AdminAuditLogs';
+import { MyGoals } from './pages/staff/MyGoals';
+import { MyDevelopmentPlan } from './pages/staff/MyDevelopmentPlan';
+import { MyCompetencies } from './pages/staff/MyCompetencies';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -100,6 +103,9 @@ function AppRoutes() {
         <Route path="goals" element={<Goals />} />
         <Route path="skill-gaps" element={<SkillGaps />} />
         <Route path="idps" element={<IDPs />} />
+        <Route path="me/goals" element={<MyGoals />} />
+        <Route path="me/development-plan" element={<MyDevelopmentPlan />} />
+        <Route path="me/competencies" element={<MyCompetencies />} />
       </Route>
 
       {/* Catch all */}

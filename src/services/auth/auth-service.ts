@@ -15,6 +15,8 @@ export interface LoginResponse {
     lastName: string;
     role: string;
     tenantId: string | null;
+    department?: string | null;
+    position?: string | null;
   };
   token: string;
   refreshToken: string;
@@ -74,6 +76,8 @@ export class AuthService {
           lastName: user.lastName,
           role: user.role,
           tenantId: user.tenantId,
+          department: user.department,
+          position: user.position,
         },
         token,
         refreshToken,
@@ -134,6 +138,9 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        tenantId: user.tenantId,
+        department: user.department,
+        position: user.position,
       };
     } catch (error) {
       apiLogger.error('Registration failed', {

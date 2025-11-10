@@ -20,67 +20,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-
+import {
+  AssessmentSummary,
+  DevelopmentPlan,
+  FeedbackInsights,
+  GoalStats,
+  GoalSummary,
+  PlanAction,
+} from '../types/staff';
 interface StaffDashboardProps {
   isPreview?: boolean;
-}
-
-type GoalStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
-
-type AssessmentStatus = 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
-
-interface GoalSummary {
-  id: string;
-  title: string;
-  description: string;
-  status: GoalStatus;
-  progress?: number | null;
-  targetDate?: string | null;
-  metadata?: Record<string, any> | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface GoalStats {
-  total: number;
-  byStatus: Record<string, number>;
-}
-
-interface AssessmentSummary {
-  id: string;
-  status: AssessmentStatus;
-  totalQuestions: number;
-  answeredCount: number;
-  averageScore?: number | null;
-  startedAt: string;
-  completedAt?: string | null;
-}
-
-interface DevelopmentPlan {
-  id: string;
-  title: string;
-  description?: string | null;
-  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
-  startDate?: string | null;
-  targetDate?: string | null;
-  progress?: number | null;
-  actions?: any;
-  updatedAt?: string;
-}
-
-interface FeedbackInsights {
-  overallSentiment?: string;
-  themes?: string[];
-  strengths?: string[];
-  areasForImprovement?: string[];
-  sentimentBreakdown?: {
-    positive?: number;
-    neutral?: number;
-    negative?: number;
-  };
-  commonKeywords?: string[];
-  feedbackCount?: number;
-  message?: string;
 }
 
 interface AssignmentItem {
@@ -159,6 +108,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
   const [developmentPlan, setDevelopmentPlan] = useState<DevelopmentPlan | null>(null);
   const [feedbackInsights, setFeedbackInsights] = useState<FeedbackInsights | null>(null);
 
+  const staffPath = (path: string) => (isPreview ? `${path}?view=staff` : path);
+
   const loadDashboard = async () => {
     if (!user?.id) {
       setLoading(false);
@@ -223,14 +174,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
 
   const activeGoals = useMemo(() => goals.filter((goal) => goal.status !== 'COMPLETED' && goal.status !== 'CANCELLED'), [goals]);
 
-  const planActions = useMemo(() => {
+  const planActions = useMemo<PlanAction[]>(() => {
     if (!developmentPlan?.actions) return [];
-    if (Array.isArray(developmentPlan.actions)) return developmentPlan.actions;
+    if (Array.isArray(developmentPlan.actions)) return developmentPlan.actions as PlanAction[];
     return [];
   }, [developmentPlan]);
 
   const planMilestones = useMemo(() => {
-    const completed = planActions.filter((action: any) => action?.status === 'COMPLETED' || action?.completed)?.length || 0;
+    const completed = planActions.filter((action) => action?.status === 'COMPLETED' || action?.completed)?.length || 0;
     return {
       total: planActions.length,
       completed,
@@ -240,7 +191,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
   const nextMilestone = useMemo(() => {
     if (!planActions.length) return null;
     const withDates = planActions
-      .map((action: any) => {
+      .map((action: PlanAction) => {
         const dueDate = action?.dueDate || action?.targetDate || action?.date;
         return {
           title: action?.title || action?.name || 'Upcoming milestone',
@@ -257,7 +208,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
   const focusAreas = useMemo(() => {
     if (!planActions.length) return [];
     const raw = planActions
-      .map((action: any) => action?.focusArea || action?.category || action?.theme)
+      .map((action) => action?.focusArea || action?.category || action?.theme)
       .filter(Boolean);
     return Array.from(new Set(raw)).slice(0, 4);
   }, [planActions]);
@@ -265,9 +216,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
   const learningRecommendations = useMemo(() => {
     if (!planActions.length) return [];
     return planActions
-      .filter((action: any) => action?.title || action?.resource)
+      .filter((action) => action?.title || action?.resource)
       .slice(0, 3)
-      .map((action: any, index: number) => ({
+      .map((action, index: number) => ({
         id: `${developmentPlan?.id}-${index}`,
         title: action?.title || action?.resource || 'Learning activity',
         source: action?.provider || action?.source || 'Development plan',
@@ -289,7 +240,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
         dueLabel: formatRelativeTime(goal.targetDate),
         progress: Math.max(0, Math.min(100, goal.progress ?? 0)),
         actionLabel: goal.status === 'DRAFT' ? 'Finalize goal' : 'Update progress',
-        url: '/goals',
+        url: staffPath('/me/goals'),
       });
     });
 
@@ -307,9 +258,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
           dueLabel: `Started ${formatTimestamp(assessment.startedAt)}`,
           progress,
           actionLabel: 'Continue',
-          url: '/competencies',
-        });
+        url: staffPath('/me/competencies'),
       });
+    });
 
     return items.slice(0, 4);
   }, [activeGoals, assessments]);
@@ -615,7 +566,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
                       {assessment.answeredCount}/{assessment.totalQuestions} questions
                     </span>
                   </div>
-                  <Link to="/competencies" className="mt-3 inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
+                  <Link
+                    to={staffPath('/me/competencies')}
+                    className="mt-3 inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
                     View details
                     <ChevronRight size={16} className="ml-1" />
                   </Link>
@@ -723,10 +677,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
                 Request a personalized development plan or explore the learning library to get started.
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-3">
-                <Link to="/idps" className="btn btn-primary">
+                <Link to={staffPath('/me/development-plan')} className="btn btn-primary">
                   Request a plan
                 </Link>
-                <Link to="/competencies" className="btn btn-secondary">
+                <Link to={staffPath('/me/competencies')} className="btn btn-secondary">
                   Explore library
                 </Link>
               </div>
@@ -766,7 +720,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
                       ))}
                     </div>
                   )}
-                  <Link to="/idps" className="mt-3 inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700">
+                  <Link
+                    to={staffPath('/me/development-plan')}
+                    className="mt-3 inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
                     View details
                     <ArrowRight size={16} className="ml-1" />
                   </Link>
@@ -792,7 +749,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
                 <p className="text-sm text-primary-600">In progress</p>
                 <p className="text-lg font-semibold text-primary-900">Tap to resume where you left off</p>
                 <div className="flex flex-wrap gap-3 mt-4">
-                  <Link to="/competencies" className="btn btn-primary flex items-center space-x-2">
+                  <Link to={staffPath('/me/competencies')} className="btn btn-primary flex items-center space-x-2">
                     <PlayCircle size={18} />
                     <span>Continue self-assessment</span>
                   </Link>
@@ -803,11 +760,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
                 <p className="text-sm text-primary-600">Ready when you are</p>
                 <p className="text-lg font-semibold text-primary-900">Start a self-assessment to unlock fresh insights</p>
                 <div className="flex flex-wrap gap-3 mt-4">
-                  <Link to="/competencies" className="btn btn-primary flex items-center space-x-2">
+                  <Link to={staffPath('/me/competencies')} className="btn btn-primary flex items-center space-x-2">
                     <Sparkles size={18} />
                     <span>Start new assessment</span>
                   </Link>
-                  <Link to="/competencies" className="btn btn-secondary">
+                  <Link to={staffPath('/me/competencies')} className="btn btn-secondary">
                     View competency library
                   </Link>
                 </div>
@@ -885,7 +842,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ isPreview = fals
             <p className="text-sm text-gray-500">Analytics & insights</p>
             <h2 className="text-2xl font-semibold text-gray-900">Performance snapshot</h2>
           </div>
-          <Link to="/goals" className="btn btn-secondary flex items-center space-x-2">
+          <Link to={staffPath('/me/goals')} className="btn btn-secondary flex items-center space-x-2">
             <BarChart3 size={18} />
             <span>Download summary</span>
           </Link>

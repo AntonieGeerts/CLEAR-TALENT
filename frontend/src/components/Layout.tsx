@@ -27,6 +27,13 @@ interface NavItem {
   match?: (pathname: string, search: string) => boolean;
 }
 
+interface StaffNavItemConfig {
+  path: string;
+  icon: LucideIcon;
+  label: string;
+  requireStaffQuery?: boolean;
+}
+
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/organizational-goals', icon: FlagTriangleRight, label: 'Organizational Goals' },
@@ -38,17 +45,16 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/idps', icon: GraduationCap, label: 'IDPs' },
 ];
 
-const STAFF_NAV_ITEMS: NavItem[] = [
+const STAFF_NAV_CONFIG: StaffNavItemConfig[] = [
   {
-    to: '/dashboard?view=staff',
+    path: '/dashboard',
     icon: LayoutDashboard,
     label: 'My Dashboard',
-    match: (pathname: string, search: string) =>
-      pathname === '/dashboard' && new URLSearchParams(search).get('view') === 'staff',
+    requireStaffQuery: true,
   },
-  { to: '/goals', icon: Target, label: 'My Goals' },
-  { to: '/idps', icon: GraduationCap, label: 'Development Plan' },
-  { to: '/competencies', icon: BookOpen, label: 'Competency Library' },
+  { path: '/me/goals', icon: Target, label: 'My Goals' },
+  { path: '/me/development-plan', icon: GraduationCap, label: 'Development Plan' },
+  { path: '/me/competencies', icon: BookOpen, label: 'Competency Hub' },
 ];
 
 const ADMIN_ROLES = new Set([
@@ -81,7 +87,25 @@ export const Layout: React.FC = () => {
     return base;
   }, [user?.role]);
 
-  const navItems = isStaffView ? STAFF_NAV_ITEMS : adminNavItems;
+  const staffNavItems = useMemo<NavItem[]>(() => {
+    return STAFF_NAV_CONFIG.map((item) => {
+      const to = `${item.path}${isAdminRole ? '?view=staff' : ''}`;
+      const match = (pathname: string, search: string) => {
+        if (item.requireStaffQuery && isAdminRole) {
+          return pathname === item.path && new URLSearchParams(search).get('view') === 'staff';
+        }
+        return pathname === item.path;
+      };
+      return {
+        to,
+        icon: item.icon,
+        label: item.label,
+        match,
+      };
+    });
+  }, [isAdminRole]);
+
+  const navItems = isStaffView ? staffNavItems : adminNavItems;
 
   const handleViewToggle = () => {
     if (!isAdminRole) return;

@@ -141,6 +141,7 @@ export class RoleTemplateService {
                   id: true,
                   name: true,
                   type: true,
+                  description: true,
                 },
               },
               level: {
